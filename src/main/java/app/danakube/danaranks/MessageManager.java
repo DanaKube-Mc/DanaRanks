@@ -1,6 +1,7 @@
 package app.danakube.danaranks;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -62,9 +63,9 @@ public class MessageManager {
 
     private void createDefaultLangFile(File file) {
         YamlConfiguration config = new YamlConfiguration();
-        config.set("messages.kick-database-error", "&c[DanaRanks] Impossible de charger vos données de rang. Veuillez vous reconnecter.");
-        config.set("messages.no-permission", "&cVous n'avez pas la permission d'exécuter cette commande.");
-        config.set("messages.profile-loaded", "&aVotre profil de rang a été correctement chargé !");
+        config.set("messages.kick-database-error", "<red>[DanaRanks] Impossible de charger vos données de rang. Veuillez vous reconnecter.");
+        config.set("messages.no-permission", "<red>Vous n'avez pas la permission d'exécuter cette commande.");
+        config.set("messages.profile-loaded", "<green>Votre profil de rang a été correctement chargé !");
         config.set("messages.plugin-enabled", "[DanaRanks] DanaRanks has been enabled!");
         config.set("messages.plugin-disabled", "[DanaRanks] DanaRanks has been disabled!");
         config.set("messages.luckperms-registered", "LuckPerms hook successfully registered.");
@@ -87,7 +88,8 @@ public class MessageManager {
         if (raw == null) {
             raw = defaultValue;
         }
-        return translateColorCodes(raw);
+        Component component = MiniMessage.miniMessage().deserialize(raw);
+        return LegacyComponentSerializer.legacySection().serialize(component);
     }
 
     public String getMessage(String key) {
@@ -99,17 +101,10 @@ public class MessageManager {
         if (raw == null) {
             raw = defaultValue;
         }
-        return LegacyComponentSerializer.legacyAmpersand().deserialize(raw);
+        return MiniMessage.miniMessage().deserialize(raw);
     }
 
     public Component getMessageComponent(String key) {
         return getMessageComponent(key, "");
-    }
-
-    private String translateColorCodes(String message) {
-        if (message == null) {
-            return null;
-        }
-        return message.replace('&', '§');
     }
 }

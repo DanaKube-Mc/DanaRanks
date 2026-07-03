@@ -200,6 +200,6 @@ public class DanaRanksTest {
         net.kyori.adventure.text.Component kickComponent = manager.getMessageComponent("kick-database-error");
         assertNotNull(kickComponent);
 
-        assertEquals("§cFallback", manager.getMessage("non-existent-key", "&cFallback"));
+        assertEquals("§cFallback", manager.getMessage("non-existent-key", "<red>Fallback"));
     }
 }

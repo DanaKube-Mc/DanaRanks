@@ -1,7 +1,7 @@
 messages:
-  kick-database-error: "&c[DanaRanks] Impossible de charger vos données de rang. Veuillez vous reconnecter."
-  no-permission: "&cVous n'avez pas la permission d'exécuter cette commande."
-  profile-loaded: "&aVotre profil de rang a été correctement chargé !"
+  kick-database-error: "<red>[DanaRanks] Impossible de charger vos données de rang. Veuillez vous reconnecter."
+  no-permission: "<red>Vous n'avez pas la permission d'exécuter cette commande."
+  profile-loaded: "<green>Votre profil de rang a été correctement chargé !"
   plugin-enabled: "[DanaRanks] DanaRanks has been enabled!"
   plugin-disabled: "[DanaRanks] DanaRanks has been disabled!"
   luckperms-registered: "LuckPerms hook successfully registered."
