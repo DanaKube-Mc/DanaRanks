@@ -1,0 +1,12 @@
+name: DanaRanks
+version: '${project.version}'
+main: app.danakube.danaranks.DanaRanks
+api-version: '1.21'
+description: Plugin de gestion des rangs pour le serveur DanaKube.
+author: DanaKube
+
+dependencies:
+  server:
+    LuckPerms:
+      load: BEFORE
+      required: true

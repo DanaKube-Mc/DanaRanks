@@ -1,0 +1,18 @@
+# Configuration de la base de données
+database:
+  type: SQLITE # SQLITE ou MYSQL
+  mysql:
+    host: localhost
+    port: 3306
+    database: danaranks
+    username: root
+    password: ""
+    prefix: "danaranks_"
+    pool:
+      maximum-pool-size: 10
+      max-lifetime: 1800000
+
+# Intégration LuckPerms
+luckperms:
+  # Nom de la piste (track) de promotion configurée dans LuckPerms
+  track-name: "danaranks"
