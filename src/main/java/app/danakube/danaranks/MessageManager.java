@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 
 public class MessageManager {
     @FunctionalInterface
@@ -17,7 +18,7 @@ public class MessageManager {
     }
 
     private final File dataFolder;
-    private final java.util.logging.Logger logger;
+    private final Logger logger;
     private final ResourceSaver resourceSaver;
     private final Map<String, String> messages = new HashMap<>();
 
@@ -25,7 +26,7 @@ public class MessageManager {
         this(plugin.getDataFolder(), plugin.getLogger(), plugin::saveResource);
     }
 
-    public MessageManager(File dataFolder, java.util.logging.Logger logger, ResourceSaver resourceSaver) {
+    public MessageManager(File dataFolder, Logger logger, ResourceSaver resourceSaver) {
         this.dataFolder = dataFolder;
         this.logger = logger;
         this.resourceSaver = resourceSaver;
@@ -44,7 +45,6 @@ public class MessageManager {
             try {
                 resourceSaver.saveResource("lang/fr.yml", false);
             } catch (IllegalArgumentException | NullPointerException e) {
-                // fallback if not found in jar or during tests
                 createDefaultLangFile(langFile);
             }
         }

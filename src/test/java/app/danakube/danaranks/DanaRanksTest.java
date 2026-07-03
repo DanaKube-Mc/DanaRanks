@@ -1,13 +1,16 @@
 package app.danakube.danaranks;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiConsumer;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -175,8 +178,8 @@ public class DanaRanksTest {
     }
 
     @Test
-    public void testMessageLoading(@org.junit.jupiter.api.io.TempDir java.nio.file.Path tempDir) throws Exception {
-        java.util.logging.Logger logger = java.util.logging.Logger.getLogger("TestLogger");
+    public void testMessageLoading(@TempDir Path tempDir) throws Exception {
+        Logger logger = Logger.getLogger("TestLogger");
 
         MessageManager manager = new MessageManager(
                 tempDir.toFile(),
