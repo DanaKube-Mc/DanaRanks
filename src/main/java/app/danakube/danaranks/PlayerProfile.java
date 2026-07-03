@@ -78,14 +78,6 @@ public class PlayerProfile {
         this.quotaProgress = quotaProgress;
     }
 
-    /**
-     * Adds ELO to the player's profile in a thread-safe manner.
-     * If ELO exceeds 100, the rank level is increased.
-     * ELO cannot fall below 0.
-     *
-     * @param amount the amount of ELO to add (can be negative)
-     * @return the number of ranks gained (always >= 0)
-     */
     public synchronized int addElo(int amount) {
         int totalElo = this.elo + amount;
         if (totalElo < 0) {

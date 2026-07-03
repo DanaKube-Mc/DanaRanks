@@ -37,14 +37,12 @@ public class DanaRanksTest {
         UUID uuid = UUID.randomUUID();
         String name = "DbTestPlayer";
         
-        // Load non-existent profile, should return a default profile
         PlayerProfile profile = dbManager.loadProfile(uuid, name).get();
         assertNotNull(profile);
         assertEquals(name, profile.getPlayerName());
         assertEquals(1, profile.getRankLevel());
         assertEquals(0, profile.getElo());
         
-        // Update profile values
         profile.setRankLevel(5);
         profile.setElo(45);
         Map<String, Object> quota = new HashMap<>();
@@ -53,21 +51,18 @@ public class DanaRanksTest {
         profile.setQuotaProgress(quota);
         
         dbManager.saveProfile(profile).get();
-        
-        // Reload and assert values match exactly
+
         PlayerProfile loaded = dbManager.loadProfile(uuid, name).get();
         assertNotNull(loaded);
         assertEquals(5, loaded.getRankLevel());
         assertEquals(45, loaded.getElo());
         assertEquals(500.0, ((Double) loaded.getQuotaProgress().get("job_xp")), 0.01);
         assertEquals(1200.0, ((Double) loaded.getQuotaProgress().get("lumens_gained")), 0.01);
-        
-        // Log ELO change history
+
         dbManager.logHistory(uuid, "QUOTA_SUCCESS", 10, 55, "Completed job quest").get();
         Thread.sleep(10);
         dbManager.logHistory(uuid, "RUSH", 20, 75, "Won rush event").get();
-        
-        // Fetch and assert history is correctly ordered (descending timestamp/id)
+
         List<HistoryEntry> history = dbManager.fetchHistory(uuid, 10).get();
         assertEquals(2, history.size());
         assertEquals("RUSH", history.get(0).getType());
@@ -112,21 +107,15 @@ public class DanaRanksTest {
             UUID uuid = UUID.randomUUID();
             String name = "OfflinePlayer";
 
-            // Load profile from DB
             PlayerProfile profile = dbManager.loadProfile(uuid, name).get();
-            
-            // Add ELO that triggers a promotion
+
             profile.addElo(150);
-            
-            // Verify that promotion callback was triggered exactly once with expected arguments
+
             assertEquals(1, spy.callCount);
             assertEquals(uuid, spy.lastUuid);
             assertEquals(1, spy.lastRanks);
-
-            // Save profile back to DB
             dbManager.saveProfile(profile).get();
 
-            // Assert values in DB
             PlayerProfile loaded = dbManager.loadProfile(uuid, name).get();
             assertEquals(2, loaded.getRankLevel());
             assertEquals(50, loaded.getElo());
@@ -154,8 +143,7 @@ public class DanaRanksTest {
         assertEquals(maliciousName, loaded.getPlayerName());
         assertEquals(10, loaded.getRankLevel());
         assertEquals(80, loaded.getElo());
-        
-        // Assert table still exists
+
         PlayerProfile testOther = dbManager.loadProfile(UUID.randomUUID(), "Other").get();
         assertNotNull(testOther);
         
@@ -182,8 +170,6 @@ public class DanaRanksTest {
             threads[i].join();
         }
         
-        // Cumulative ELO gained should be 100.
-        // Formula: (rankLevel - 1) * 100 + elo
         int cumulativeElo = (profile.getRankLevel() - 1) * 100 + profile.getElo();
         assertEquals(100, cumulativeElo);
     }

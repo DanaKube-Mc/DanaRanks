@@ -24,15 +24,12 @@ public class PlayerConnectionListener implements Listener {
         String name = event.getName();
 
         try {
-            // Puisque cet événement est asynchrone, nous pouvons appeler join() pour attendre le chargement de la base de données
-            // sans bloquer le Tick Thread de Minecraft
             PlayerProfile profile = plugin.getDatabaseManager().loadProfile(uuid, name).join();
             if (profile != null) {
                 plugin.getProfileCache().put(uuid, profile);
             }
         } catch (CompletionException | NullPointerException e) {
             plugin.getLogger().severe("Failed to load player profile for " + name + " (" + uuid + "): " + e.getMessage());
-            // Nous ne mettons rien dans le cache pour indiquer l'échec
             plugin.getProfileCache().remove(uuid);
         }
     }
@@ -44,7 +41,6 @@ public class PlayerConnectionListener implements Listener {
 
         PlayerProfile profile = plugin.getProfileCache().get(uuid);
         if (profile == null) {
-            // Le chargement a échoué (ou n'a pas eu lieu), sécurité anti-faille : kick immédiat
             Component kickMessage = Component.text("Impossible de charger vos données de rang. Veuillez vous reconnecter.");
             player.kick(kickMessage);
         }
@@ -55,7 +51,6 @@ public class PlayerConnectionListener implements Listener {
         UUID uuid = event.getPlayer().getUniqueId();
         PlayerProfile profile = plugin.getProfileCache().remove(uuid);
         if (profile != null) {
-            // Sauvegarde asynchrone à la déconnexion
             plugin.getDatabaseManager().saveProfile(profile).exceptionally(ex -> {
                 plugin.getLogger().severe("Failed to save profile for " + uuid + " on quit: " + ex.getMessage());
                 return null;

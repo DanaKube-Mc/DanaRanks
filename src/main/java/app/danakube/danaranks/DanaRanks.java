@@ -25,11 +25,9 @@ public final class DanaRanks extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        // Save default config
         saveDefaultConfig();
         FileConfiguration config = getConfig();
 
-        // Initialize database
         String dbType = config.getString("database.type", "SQLITE");
         if (dbType.equalsIgnoreCase("MYSQL")) {
             String host = config.getString("database.mysql.host", "localhost");
@@ -45,7 +43,6 @@ public final class DanaRanks extends JavaPlugin {
             databaseManager = new DatabaseManager("SQLITE", null, 0, null, null, null, null, 0, 0, getDataFolder());
         }
 
-        // Initialize LuckPerms
         String trackName = config.getString("luckperms.track-name", "danaranks");
         if (getServer().getPluginManager().isPluginEnabled("LuckPerms")) {
             luckPermsHook = new LuckPermsHook(trackName);
@@ -54,14 +51,12 @@ public final class DanaRanks extends JavaPlugin {
             getLogger().warning("LuckPerms not found! Promotions will be disabled.");
         }
 
-        // Configure ELO promotion callback
         PlayerProfile.setPromotionCallback((uuid, ranks) -> {
             if (luckPermsHook != null) {
                 luckPermsHook.promote(uuid, ranks);
             }
         });
 
-        // Register listener
         getServer().getPluginManager().registerEvents(new PlayerConnectionListener(this), this);
 
         getLogger().info("DanaRanks has been enabled!");

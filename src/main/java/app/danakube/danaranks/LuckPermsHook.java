@@ -3,7 +3,6 @@ package app.danakube.danaranks;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.context.ImmutableContextSet;
-import net.luckperms.api.model.user.User;
 import net.luckperms.api.track.Track;
 
 import java.util.UUID;
