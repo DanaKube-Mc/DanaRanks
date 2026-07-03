@@ -1,4 +1,7 @@
-package app.danakube.danaranks;
+package app.danakube.danaranks.database;
+
+import app.danakube.danaranks.profile.PlayerProfile;
+import app.danakube.danaranks.profile.HistoryEntry;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;

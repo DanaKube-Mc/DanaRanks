@@ -1,4 +1,4 @@
-package app.danakube.danaranks;
+package app.danakube.danaranks.tracker;
 
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;

@@ -1,4 +1,4 @@
-package app.danakube.danaranks;
+package app.danakube.danaranks.profile;
 
 import java.time.Instant;
 import java.util.HashMap;

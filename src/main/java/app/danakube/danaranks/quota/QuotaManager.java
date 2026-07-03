@@ -1,4 +1,7 @@
-package app.danakube.danaranks;
+package app.danakube.danaranks.quota;
+
+import app.danakube.danaranks.DanaRanks;
+import app.danakube.danaranks.profile.PlayerProfile;
 
 import org.bukkit.configuration.file.FileConfiguration;
 

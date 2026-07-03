@@ -1,4 +1,8 @@
-package app.danakube.danaranks;
+package app.danakube.danaranks.listener;
+
+import app.danakube.danaranks.DanaRanks;
+import app.danakube.danaranks.profile.PlayerProfile;
+import app.danakube.danaranks.quota.QuotaManager;
 
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;

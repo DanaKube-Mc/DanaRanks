@@ -1,4 +1,6 @@
-package app.danakube.danaranks;
+package app.danakube.danaranks.lang;
+
+import app.danakube.danaranks.DanaRanks;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;

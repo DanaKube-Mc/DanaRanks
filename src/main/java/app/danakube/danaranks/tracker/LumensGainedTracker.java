@@ -1,4 +1,8 @@
-package app.danakube.danaranks;
+package app.danakube.danaranks.tracker;
+
+import app.danakube.danaranks.DanaRanks;
+import app.danakube.danaranks.profile.PlayerProfile;
+import app.danakube.danaranks.quota.QuotaManager;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;

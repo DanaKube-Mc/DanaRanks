@@ -1,4 +1,4 @@
-package app.danakube.danaranks;
+package app.danakube.danaranks.quota;
 
 public class ObjectiveConfig {
     private final String name;
