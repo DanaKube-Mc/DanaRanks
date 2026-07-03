@@ -173,4 +173,30 @@ public class DanaRanksTest {
         int cumulativeElo = (profile.getRankLevel() - 1) * 100 + profile.getElo();
         assertEquals(100, cumulativeElo);
     }
+
+    @Test
+    public void testMessageLoading(@org.junit.jupiter.api.io.TempDir java.nio.file.Path tempDir) throws Exception {
+        java.util.logging.Logger logger = java.util.logging.Logger.getLogger("TestLogger");
+
+        MessageManager manager = new MessageManager(
+                tempDir.toFile(),
+                logger,
+                (path, replace) -> { throw new IllegalArgumentException("Resource not found in jar"); }
+        );
+
+        java.io.File expectedFile = new java.io.File(tempDir.toFile(), "lang/fr.yml");
+        assertTrue(expectedFile.exists());
+
+        assertEquals("§c[DanaRanks] Impossible de charger vos données de rang. Veuillez vous reconnecter.",
+                manager.getMessage("kick-database-error"));
+        assertEquals("§cVous n'avez pas la permission d'exécuter cette commande.",
+                manager.getMessage("no-permission"));
+        assertEquals("§aVotre profil de rang a été correctement chargé !",
+                manager.getMessage("profile-loaded"));
+
+        net.kyori.adventure.text.Component kickComponent = manager.getMessageComponent("kick-database-error");
+        assertNotNull(kickComponent);
+
+        assertEquals("§cFallback", manager.getMessage("non-existent-key", "&cFallback"));
+    }
 }

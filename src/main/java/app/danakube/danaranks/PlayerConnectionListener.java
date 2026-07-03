@@ -41,8 +41,17 @@ public class PlayerConnectionListener implements Listener {
 
         PlayerProfile profile = plugin.getProfileCache().get(uuid);
         if (profile == null) {
-            Component kickMessage = Component.text("Impossible de charger vos données de rang. Veuillez vous reconnecter.");
+            Component kickMessage = plugin.getMessageManager().getMessageComponent(
+                    "kick-database-error",
+                    "&c[DanaRanks] Impossible de charger vos données de rang. Veuillez vous reconnecter."
+            );
             player.kick(kickMessage);
+        } else {
+            Component loadedMessage = plugin.getMessageManager().getMessageComponent(
+                    "profile-loaded",
+                    "&aVotre profil de rang a été correctement chargé !"
+            );
+            player.sendMessage(loadedMessage);
         }
     }
 

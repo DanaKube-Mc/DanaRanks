@@ -11,6 +11,7 @@ public final class DanaRanks extends JavaPlugin {
     private static DanaRanks instance;
     private DatabaseManager databaseManager;
     private LuckPermsHook luckPermsHook;
+    private MessageManager messageManager;
     private final Map<UUID, PlayerProfile> profileCache = new ConcurrentHashMap<>();
 
     public static DanaRanks getInstance() {
@@ -27,6 +28,8 @@ public final class DanaRanks extends JavaPlugin {
 
         saveDefaultConfig();
         FileConfiguration config = getConfig();
+
+        messageManager = new MessageManager(this);
 
         String dbType = config.getString("database.type", "SQLITE");
         if (dbType.equalsIgnoreCase("MYSQL")) {
@@ -46,9 +49,9 @@ public final class DanaRanks extends JavaPlugin {
         String trackName = config.getString("luckperms.track-name", "danaranks");
         if (getServer().getPluginManager().isPluginEnabled("LuckPerms")) {
             luckPermsHook = new LuckPermsHook(trackName);
-            getLogger().info("LuckPerms hook successfully registered.");
+            getLogger().info(messageManager.getMessage("luckperms-registered", "LuckPerms hook successfully registered."));
         } else {
-            getLogger().warning("LuckPerms not found! Promotions will be disabled.");
+            getLogger().warning(messageManager.getMessage("luckperms-not-found", "LuckPerms not found! Promotions will be disabled."));
         }
 
         PlayerProfile.setPromotionCallback((uuid, ranks) -> {
@@ -59,7 +62,7 @@ public final class DanaRanks extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new PlayerConnectionListener(this), this);
 
-        getLogger().info("DanaRanks has been enabled!");
+        getLogger().info(messageManager.getMessage("plugin-enabled", "DanaRanks has been enabled!"));
     }
 
     @Override
@@ -70,11 +73,19 @@ public final class DanaRanks extends JavaPlugin {
         }
         profileCache.clear();
         instance = null;
-        getLogger().info("DanaRanks has been disabled!");
+        if (messageManager != null) {
+            getLogger().info(messageManager.getMessage("plugin-disabled", "DanaRanks has been disabled!"));
+        } else {
+            getLogger().info("DanaRanks has been disabled!");
+        }
     }
 
     public DatabaseManager getDatabaseManager() {
         return databaseManager;
+    }
+
+    public MessageManager getMessageManager() {
+        return messageManager;
     }
 
     public LuckPermsHook getLuckPermsHook() {
