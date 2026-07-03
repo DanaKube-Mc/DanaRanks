@@ -31,6 +31,9 @@ public class ToolXpTracker implements ResourceTracker {
                 if (qm != null) {
                     qm.incrementProgress(profile, getResourceName(), amount);
                 }
+                if (plugin.getRushManager() != null) {
+                    plugin.getRushManager().handleResourceGain(player.getUniqueId(), getResourceName(), amount, java.time.Instant.now());
+                }
             }
         }
     }

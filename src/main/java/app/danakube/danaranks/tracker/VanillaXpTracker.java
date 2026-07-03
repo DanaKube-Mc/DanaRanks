@@ -39,6 +39,9 @@ public class VanillaXpTracker implements ResourceTracker {
                 if (qm != null) {
                     qm.incrementProgress(profile, getResourceName(), amount);
                 }
+                if (plugin.getRushManager() != null) {
+                    plugin.getRushManager().handleResourceGain(player.getUniqueId(), getResourceName(), amount, java.time.Instant.now());
+                }
             }
         }
     }
@@ -66,6 +69,9 @@ public class VanillaXpTracker implements ResourceTracker {
                 QuotaManager qm = QuotaManager.getInstance();
                 if (qm != null) {
                     qm.incrementProgress(profile, getResourceName(), xpSpent);
+                }
+                if (plugin.getRushManager() != null) {
+                    plugin.getRushManager().handleResourceGain(player.getUniqueId(), getResourceName(), xpSpent, java.time.Instant.now());
                 }
             }
         }

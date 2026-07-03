@@ -1,0 +1,165 @@
+package app.danakube.danaranks.command;
+
+import app.danakube.danaranks.DanaRanks;
+import app.danakube.danaranks.quota.RushManager;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
+import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class RushCommand implements CommandExecutor, TabCompleter {
+
+    private final DanaRanks plugin;
+    private final RushManager rushManager;
+
+    public RushCommand(DanaRanks plugin, RushManager rushManager) {
+        this.plugin = plugin;
+        this.rushManager = rushManager;
+    }
+
+    @Override
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("Seuls les joueurs peuvent utiliser cette commande.");
+            return true;
+        }
+
+        if (args.length == 0) {
+            sendHelp(player);
+            return true;
+        }
+
+        String subCommand = args[0].toLowerCase();
+
+        switch (subCommand) {
+            case "join":
+                handleJoin(player);
+                break;
+            case "status":
+                handleStatus(player);
+                break;
+            default:
+                sendHelp(player);
+                break;
+        }
+
+        return true;
+    }
+
+    private void handleJoin(Player player) {
+        if (!rushManager.isDailyPlanned()) {
+            player.sendMessage(MiniMessage.miniMessage().deserialize(
+                    "<red>[Rush] Aucun événement de Rush n'est planifié pour le moment.</red>"
+            ));
+            return;
+        }
+
+        Instant now = Instant.now();
+        boolean success = rushManager.registerPlayer(player.getUniqueId(), now);
+
+        if (success) {
+            player.sendMessage(MiniMessage.miniMessage().deserialize(
+                    "<green>[Rush] Inscription réussie ! Votre score commence à 0. Bonne chance !</green>"
+            ));
+        } else {
+            // Check if already registered
+            if (rushManager.getPlayerScore(player.getUniqueId()) >= 0.0 && rushManager.getRegisteredPlayersCount() > 0) {
+                // Technically registerPlayer returns false if already registered
+                // We double check score presence
+                player.sendMessage(MiniMessage.miniMessage().deserialize(
+                        "<yellow>[Rush] Vous êtes déjà inscrit à l'événement du jour !</yellow>"
+                ));
+            } else {
+                player.sendMessage(MiniMessage.miniMessage().deserialize(
+                        "<red>[Rush] Impossible de s'inscrire. L'événement est peut-être terminé ou non démarré.</red>"
+                ));
+            }
+        }
+    }
+
+    private void handleStatus(Player player) {
+        if (!rushManager.isDailyPlanned()) {
+            player.sendMessage(MiniMessage.miniMessage().deserialize(
+                    "<blue>[Rush] Statut : Aucun Rush planifié pour aujourd'hui.</blue>"
+            ));
+            return;
+        }
+
+        String resource = rushManager.getDailyResource();
+        LocalDateTime startTime = rushManager.getStartTime();
+        int duration = rushManager.getDurationMinutes();
+
+        Instant now = Instant.now();
+        Instant startInstant = startTime.atZone(ZoneId.systemDefault()).toInstant();
+        Instant endInstant = startInstant.plusSeconds(duration * 60L);
+
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+        String formattedStart = startTime.format(timeFormatter);
+
+        if (now.isBefore(startInstant)) {
+            player.sendMessage(MiniMessage.miniMessage().deserialize(
+                    "<blue>[Rush] Le Rush (Ressource: <gold>" + resource + "</gold>) commencera à <yellow>" + formattedStart + "</yellow> pour une durée de <yellow>" + duration + "</yellow> minutes.\nTapez <green>/rush join</green> pour participer !</blue>"
+            ));
+        } else if (now.isAfter(endInstant)) {
+            player.sendMessage(MiniMessage.miniMessage().deserialize(
+                    "<blue>[Rush] L'événement d'aujourd'hui est terminé !</blue>"
+            ));
+        } else {
+            // Rush active
+            double score = rushManager.getPlayerScore(player.getUniqueId());
+            boolean isRegistered = score >= 0.0 && rushManager.getRegisteredPlayersCount() > 0; // Simple approximation or check
+            
+            long remainingMinutes = (endInstant.getEpochSecond() - now.getEpochSecond()) / 60;
+            if (remainingMinutes < 1) remainingMinutes = 1;
+
+            if (isRegistered) {
+                player.sendMessage(MiniMessage.miniMessage().deserialize(
+                        "<blue>[Rush] L'événement est en cours ! Temps restant : <yellow>" + remainingMinutes + "</yellow> minutes.\nVotre Score actuel : <gold>" + String.format("%.0f", score) + "</gold></blue>"
+                ));
+            } else {
+                player.sendMessage(MiniMessage.miniMessage().deserialize(
+                        "<blue>[Rush] L'événement est en cours ! Temps restant : <yellow>" + remainingMinutes + "</yellow> minutes.\nVous n'êtes pas inscrit ! Tapez <green>/rush join</green> pour commencer à marquer des points !</blue>"
+                ));
+            }
+        }
+    }
+
+    private void sendHelp(Player player) {
+        player.sendMessage(MiniMessage.miniMessage().deserialize(
+                "<blue>[Rush] Commandes disponibles :\n" +
+                " - <yellow>/rush join</yellow> : S'inscrire au Rush quotidien.\n" +
+                " - <yellow>/rush status</yellow> : Voir le statut du Rush du jour.</blue>"
+        ));
+    }
+
+    @Override
+    public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+        if (args.length == 1) {
+            List<String> list = new ArrayList<>();
+            list.add("join");
+            list.add("status");
+            
+            List<String> completions = new ArrayList<>();
+            String input = args[0].toLowerCase();
+            for (String s : list) {
+                if (s.startsWith(input)) {
+                    completions.add(s);
+                }
+            }
+            return completions;
+        }
+        return Collections.emptyList();
+    }
+}

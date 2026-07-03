@@ -61,6 +61,10 @@ public class PlayerConnectionListener implements Listener {
                     "&aVotre profil de rang a été correctement chargé !"
             );
             player.sendMessage(loadedMessage);
+
+            if (plugin.getRushManager() != null) {
+                plugin.getRushManager().checkOfflineSummary(profile, (msg) -> player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(msg)));
+            }
         }
     }
 

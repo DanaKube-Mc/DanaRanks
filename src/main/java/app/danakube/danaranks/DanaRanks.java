@@ -13,6 +13,8 @@ import app.danakube.danaranks.tracker.ToolXpTracker;
 import app.danakube.danaranks.tracker.TrackerRegistry;
 import app.danakube.danaranks.tracker.VanillaXpTracker;
 
+import app.danakube.danaranks.quota.RushManager;
+import app.danakube.danaranks.command.RushCommand;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -27,6 +29,7 @@ public final class DanaRanks extends JavaPlugin {
     private MessageManager messageManager;
     private QuotaManager quotaManager;
     private TrackerRegistry trackerRegistry;
+    private RushManager rushManager;
     private final Map<UUID, PlayerProfile> profileCache = new ConcurrentHashMap<>();
 
     public static DanaRanks getInstance() {
@@ -90,6 +93,14 @@ public final class DanaRanks extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new PlayerConnectionListener(this), this);
 
+        // Initialize RushManager
+        rushManager = new RushManager(this);
+        rushManager.loadConfig(config);
+        rushManager.startScheduler();
+
+        // Register Command
+        getCommand("rush").setExecutor(new RushCommand(this, rushManager));
+
         getLogger().info(messageManager.getMessage("plugin-enabled", "DanaRanks has been enabled!"));
     }
 
@@ -102,6 +113,7 @@ public final class DanaRanks extends JavaPlugin {
         profileCache.clear();
         QuotaManager.setInstance(null);
         quotaManager = null;
+        rushManager = null;
         trackerRegistry = null;
         instance = null;
         if (messageManager != null) {
@@ -137,5 +149,9 @@ public final class DanaRanks extends JavaPlugin {
 
     public TrackerRegistry getTrackerRegistry() {
         return trackerRegistry;
+    }
+
+    public RushManager getRushManager() {
+        return rushManager;
     }
 }

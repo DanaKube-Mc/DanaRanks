@@ -42,6 +42,9 @@ public class LumensSpentTracker implements ResourceTracker {
                 if (qm != null) {
                     qm.incrementProgress(profile, getResourceName(), spentAmount);
                 }
+                if (plugin.getRushManager() != null) {
+                    plugin.getRushManager().handleResourceGain(player.getUniqueId(), getResourceName(), spentAmount, java.time.Instant.now());
+                }
             }
         }
     }
