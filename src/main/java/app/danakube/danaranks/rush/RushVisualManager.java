@@ -14,8 +14,6 @@ import java.util.UUID;
 
 public class RushVisualManager {
 
-    private final DanaRanks plugin;
-    
     private BossBar announceBar;
     private String announceTitleTemplate;
     private BossBar.Color announceColor;
@@ -27,7 +25,6 @@ public class RushVisualManager {
     private BossBar.Overlay activeOverlay;
 
     public RushVisualManager(DanaRanks plugin) {
-        this.plugin = plugin;
     }
 
     public void loadConfig(FileConfiguration config) {

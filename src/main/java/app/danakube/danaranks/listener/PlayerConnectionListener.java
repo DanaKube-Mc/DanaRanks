@@ -3,7 +3,6 @@ package app.danakube.danaranks.listener;
 import app.danakube.danaranks.DanaRanks;
 import app.danakube.danaranks.profile.PlayerProfile;
 import app.danakube.danaranks.quota.QuotaManager;
-import app.danakube.danaranks.rush.RushManager;
 
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
