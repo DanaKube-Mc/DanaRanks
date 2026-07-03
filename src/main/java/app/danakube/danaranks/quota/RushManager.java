@@ -157,10 +157,12 @@ public class RushManager {
 
     private void announceRegistration() {
         if (plugin == null) return;
-        Bukkit.broadcast(MiniMessage.miniMessage().deserialize(
-                "<blue>[Rush] Le Rush quotidien sur la ressource <gold>" + dailyResource + "</gold> est planifié ! Tapez <yellow>/rush join</yellow> pour vous inscrire !"
-        ));
-        sendDiscordWebhook("[Rush] Le Rush sur la ressource " + dailyResource + " est planifié pour aujourd'hui ! Les inscriptions sont ouvertes via /rush join !");
+        Bukkit.broadcast(getMessageComponent("rush-planned-announcement",
+                "<blue>[Rush] Le Rush quotidien sur la ressource <gold>%resource%</gold> est planifié ! Tapez <yellow>/rush join</yellow> pour vous inscrire !</blue>",
+                Map.of("%resource%", dailyResource)));
+        sendDiscordWebhook(formatMessage("rush-discord-planned",
+                "[Rush] Le Rush sur la ressource %resource% est planifié pour aujourd'hui ! Les inscriptions sont ouvertes via /rush join !",
+                Map.of("%resource%", dailyResource)));
     }
 
     public boolean registerPlayer(UUID uuid, Instant now) {
@@ -292,7 +294,9 @@ public class RushManager {
             if (!rushActive) {
                 rushActive = true;
                 visualManager.hideAnnounceBar();
-                sendDiscordWebhook("[Rush] Le Rush quotidien sur la ressource " + dailyResource + " vient de démarrer pour " + durationMinutes + " minutes !");
+                sendDiscordWebhook(formatMessage("rush-discord-started",
+                        "[Rush] Le Rush quotidien sur la ressource %resource% vient de démarrer pour %duration% minutes !",
+                        Map.of("%resource%", dailyResource, "%duration%", String.valueOf(durationMinutes))));
             }
 
             long totalSecs = durationMinutes * 60L;
@@ -313,7 +317,9 @@ public class RushManager {
 
             if (!discordAnnounced) {
                 discordAnnounced = true;
-                sendDiscordWebhook("[Rush] Le Rush sur la ressource " + dailyResource + " démarrera dans " + preAnnounceMinutes + " minutes ! Tapez /rush join en jeu !");
+                sendDiscordWebhook(formatMessage("rush-discord-pre-announce",
+                        "[Rush] Le Rush sur la ressource %resource% démarrera dans %time% minutes ! Tapez /rush join en jeu !",
+                        Map.of("%resource%", dailyResource, "%time%", String.valueOf(preAnnounceMinutes))));
             }
         }
     }
@@ -373,7 +379,27 @@ public class RushManager {
             .thenCompose(v -> processEloRedistribution(resolvedProfiles, activeParticipants));
     }
 
-    private CompletableFuture<Void> processEloRedistribution(List<PlayerProfile> profiles, Map<UUID, Double> scores) {
+    private String getRawMessage(String key, String defaultValue) {
+        if (plugin != null && plugin.getMessageManager() != null) {
+            return plugin.getMessageManager().getRawMessage(key, defaultValue);
+        }
+        return defaultValue;
+    }
+
+    private String formatMessage(String key, String defaultValue, Map<String, String> placeholders) {
+        String raw = getRawMessage(key, defaultValue);
+        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+            raw = raw.replace(entry.getKey(), entry.getValue());
+        }
+        return raw;
+    }
+
+    private net.kyori.adventure.text.Component getMessageComponent(String key, String defaultValue, Map<String, String> placeholders) {
+        String raw = formatMessage(key, defaultValue, placeholders);
+        return MiniMessage.miniMessage().deserialize(raw);
+    }
+
+    private Map<String, List<PlayerProfile>> groupProfilesByTier(List<PlayerProfile> profiles) {
         Map<String, List<PlayerProfile>> tiers = new HashMap<>();
         tiers.put("fer", new ArrayList<>());
         tiers.put("bronze", new ArrayList<>());
@@ -385,51 +411,41 @@ public class RushManager {
             String tierName = getTierName(profile.getRankLevel());
             tiers.get(tierName).add(profile);
         }
+        return tiers;
+    }
 
-        List<PlayerProfile> orphans = new ArrayList<>();
-        Map<UUID, Integer> eloChanges = new HashMap<>();
-        List<CompletableFuture<Void>> dbFutures = new ArrayList<>();
-
-        for (Map.Entry<String, List<PlayerProfile>> entry : tiers.entrySet()) {
-            String tier = entry.getKey();
-            List<PlayerProfile> tierPlayers = entry.getValue();
-            RankSetting settings = rankSettings.get(tier);
-            double eloFactor = settings != null ? settings.eloFactor : 30.0;
-
-            if (tierPlayers.size() >= 2) {
-                double maxScore = 0;
-                for (PlayerProfile p : tierPlayers) {
-                    double s = scores.getOrDefault(p.getUuid(), 0.0);
-                    if (s > maxScore) maxScore = s;
-                }
-
-                if (maxScore == 0.0) {
-                    for (PlayerProfile p : tierPlayers) {
-                        eloChanges.put(p.getUuid(), 0);
-                    }
-                } else {
-                    double sumR = 0;
-                    Map<UUID, Double> rValues = new HashMap<>();
-                    for (PlayerProfile p : tierPlayers) {
-                        double r = scores.getOrDefault(p.getUuid(), 0.0) / maxScore;
-                        rValues.put(p.getUuid(), r);
-                        sumR += r;
-                    }
-                    double meanR = sumR / tierPlayers.size();
-
-                    for (PlayerProfile p : tierPlayers) {
-                        double d = rValues.get(p.getUuid()) - meanR;
-                        d = Math.round(d * 1000000.0) / 1000000.0;
-                        double changeRaw = eloFactor * d;
-                        int change = (changeRaw >= 0) ? (int) Math.round(changeRaw) : -((int) Math.round(Math.abs(changeRaw)));
-                        eloChanges.put(p.getUuid(), change);
-                    }
-                }
-            } else if (tierPlayers.size() == 1) {
-                orphans.add(tierPlayers.getFirst());
-            }
+    private void calculateIntraRankEloChanges(List<PlayerProfile> tierPlayers, Map<UUID, Double> scores, double eloFactor, Map<UUID, Integer> eloChanges) {
+        double maxScore = 0;
+        for (PlayerProfile p : tierPlayers) {
+            double s = scores.getOrDefault(p.getUuid(), 0.0);
+            if (s > maxScore) maxScore = s;
         }
 
+        if (maxScore == 0.0) {
+            for (PlayerProfile p : tierPlayers) {
+                eloChanges.put(p.getUuid(), 0);
+            }
+        } else {
+            double sumR = 0;
+            Map<UUID, Double> rValues = new HashMap<>();
+            for (PlayerProfile p : tierPlayers) {
+                double r = scores.getOrDefault(p.getUuid(), 0.0) / maxScore;
+                rValues.put(p.getUuid(), r);
+                sumR += r;
+            }
+            double meanR = sumR / tierPlayers.size();
+
+            for (PlayerProfile p : tierPlayers) {
+                double d = rValues.get(p.getUuid()) - meanR;
+                d = Math.round(d * 1000000.0) / 1000000.0;
+                double changeRaw = eloFactor * d;
+                int change = (changeRaw >= 0) ? (int) Math.round(changeRaw) : -((int) Math.round(Math.abs(changeRaw)));
+                eloChanges.put(p.getUuid(), change);
+            }
+        }
+    }
+
+    private void calculateOrphanEloChanges(List<PlayerProfile> orphans, Map<UUID, Double> scores, Map<UUID, Integer> eloChanges) {
         if (orphans.size() >= 2) {
             double maxScore = 0;
             for (PlayerProfile p : orphans) {
@@ -473,6 +489,10 @@ public class RushManager {
         } else if (orphans.size() == 1) {
             eloChanges.put(orphans.getFirst().getUuid(), 0);
         }
+    }
+
+    private CompletableFuture<Void> applyAndSaveEloChanges(List<PlayerProfile> profiles, Map<UUID, Integer> eloChanges) {
+        List<CompletableFuture<Void>> dbFutures = new ArrayList<>();
 
         for (PlayerProfile profile : profiles) {
             int change = eloChanges.getOrDefault(profile.getUuid(), 0);
@@ -497,10 +517,11 @@ public class RushManager {
                 try {
                     Player onlinePlayer = Bukkit.getPlayer(profile.getUuid());
                     if (onlinePlayer != null) {
-                        String colorTag = change >= 0 ? "<green>" : "<red>";
-                        onlinePlayer.sendMessage(MiniMessage.miniMessage().deserialize(
-                                "<blue>[Rush] L'événement s'est terminé ! Vous avez " + (change >= 0 ? "gagné" : "perdu") + " " + colorTag + textSign + change + " ELO</color> !"
-                        ));
+                        String key = change >= 0 ? "rush-ended-win" : "rush-ended-loss";
+                        String fallback = change >= 0 
+                            ? "<blue>[Rush] L'événement s'est terminé ! Vous avez gagné <green>%change%</green> !"
+                            : "<blue>[Rush] L'événement s'est terminé ! Vous avez perdu <red>%change%</red> !";
+                        onlinePlayer.sendMessage(getMessageComponent(key, fallback, Map.of("%change%", textSign + change + " ELO")));
                     }
                 } catch (Exception e) {
                     // Safe fallback in tests
@@ -510,6 +531,29 @@ public class RushManager {
 
         registeredScores.clear();
         return CompletableFuture.allOf(dbFutures.toArray(new CompletableFuture[0]));
+    }
+
+    private CompletableFuture<Void> processEloRedistribution(List<PlayerProfile> profiles, Map<UUID, Double> scores) {
+        Map<String, List<PlayerProfile>> tiers = groupProfilesByTier(profiles);
+        List<PlayerProfile> orphans = new ArrayList<>();
+        Map<UUID, Integer> eloChanges = new HashMap<>();
+
+        for (Map.Entry<String, List<PlayerProfile>> entry : tiers.entrySet()) {
+            String tier = entry.getKey();
+            List<PlayerProfile> tierPlayers = entry.getValue();
+            RankSetting settings = rankSettings.get(tier);
+            double eloFactor = settings != null ? settings.eloFactor : 30.0;
+
+            if (tierPlayers.size() >= 2) {
+                calculateIntraRankEloChanges(tierPlayers, scores, eloFactor, eloChanges);
+            } else if (tierPlayers.size() == 1) {
+                orphans.add(tierPlayers.getFirst());
+            }
+        }
+
+        calculateOrphanEloChanges(orphans, scores, eloChanges);
+
+        return applyAndSaveEloChanges(profiles, eloChanges);
     }
 
     private String getTierName(int rankLevel) {
@@ -525,10 +569,12 @@ public class RushManager {
             String summary = (String) profile.getQuotaProgress().remove("rush_pending_summary");
 
             boolean isWin = !summary.startsWith("-");
-            String colorTag = isWin ? "<green>" : "<red>";
-            String actionWord = isWin ? "gagné" : "perdu";
+            String key = isWin ? "rush-ended-win" : "rush-ended-loss";
+            String fallback = isWin 
+                ? "<blue>[Rush] L'événement s'est terminé ! Vous avez gagné <green>%change%</green> !"
+                : "<blue>[Rush] L'événement s'est terminé ! Vous avez perdu <red>%change%</red> !";
             
-            messageSender.accept("<blue>[Rush] L'événement s'est terminé ! Vous avez " + actionWord + " " + colorTag + summary + "</color> !");
+            messageSender.accept(formatMessage(key, fallback, Map.of("%change%", summary)));
 
             if (getDatabaseManager() != null) {
                 return getDatabaseManager().saveProfile(profile);

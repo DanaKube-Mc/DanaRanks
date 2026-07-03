@@ -18,6 +18,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class RushCommand implements CommandExecutor, TabCompleter {
 
@@ -29,10 +30,27 @@ public class RushCommand implements CommandExecutor, TabCompleter {
         this.rushManager = rushManager;
     }
 
+    private net.kyori.adventure.text.Component getMessage(String key, String defaultValue) {
+        return getMessage(key, defaultValue, Collections.emptyMap());
+    }
+
+    private net.kyori.adventure.text.Component getMessage(String key, String defaultValue, Map<String, String> placeholders) {
+        String raw;
+        if (plugin != null && plugin.getMessageManager() != null) {
+            raw = plugin.getMessageManager().getRawMessage(key, defaultValue);
+        } else {
+            raw = defaultValue;
+        }
+        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+            raw = raw.replace(entry.getKey(), entry.getValue());
+        }
+        return MiniMessage.miniMessage().deserialize(raw);
+    }
+
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("Seuls les joueurs peuvent utiliser cette commande.");
+            sender.sendMessage(getMessage("rush-player-only", "<red>Seuls les joueurs peuvent utiliser cette commande.</red>"));
             return true;
         }
 
@@ -60,9 +78,7 @@ public class RushCommand implements CommandExecutor, TabCompleter {
 
     private void handleJoin(Player player) {
         if (!rushManager.isDailyPlanned()) {
-            player.sendMessage(MiniMessage.miniMessage().deserialize(
-                    "<red>[Rush] Aucun événement de Rush n'est planifié pour le moment.</red>"
-            ));
+            player.sendMessage(getMessage("rush-no-active", "<red>[Rush] Aucun événement de Rush n'est planifié pour le moment.</red>"));
             return;
         }
 
@@ -70,27 +86,19 @@ public class RushCommand implements CommandExecutor, TabCompleter {
         boolean success = rushManager.registerPlayer(player.getUniqueId(), now);
 
         if (success) {
-            player.sendMessage(MiniMessage.miniMessage().deserialize(
-                    "<green>[Rush] Inscription réussie ! Votre score commence à 0. Bonne chance !</green>"
-            ));
+            player.sendMessage(getMessage("rush-joined", "<green>[Rush] Inscription réussie ! Votre score commence à 0. Bonne chance !</green>"));
         } else {
             if (rushManager.getPlayerScore(player.getUniqueId()) >= 0.0 && rushManager.getRegisteredPlayersCount() > 0) {
-                player.sendMessage(MiniMessage.miniMessage().deserialize(
-                        "<yellow>[Rush] Vous êtes déjà inscrit à l'événement du jour !</yellow>"
-                ));
+                player.sendMessage(getMessage("rush-already-joined", "<yellow>[Rush] Vous êtes déjà inscrit à l'événement du jour !</yellow>"));
             } else {
-                player.sendMessage(MiniMessage.miniMessage().deserialize(
-                        "<red>[Rush] Impossible de s'inscrire. L'événement est peut-être terminé ou non démarré.</red>"
-                ));
+                player.sendMessage(getMessage("rush-join-failed", "<red>[Rush] Impossible de s'inscrire. L'événement est peut-être terminé ou non démarré.</red>"));
             }
         }
     }
 
     private void handleStatus(Player player) {
         if (!rushManager.isDailyPlanned()) {
-            player.sendMessage(MiniMessage.miniMessage().deserialize(
-                    "<blue>[Rush] Statut : Aucun Rush planifié pour aujourd'hui.</blue>"
-            ));
+            player.sendMessage(getMessage("rush-status-no-active", "<blue>[Rush] Statut : Aucun Rush planifié pour aujourd'hui.</blue>"));
             return;
         }
 
@@ -106,13 +114,11 @@ public class RushCommand implements CommandExecutor, TabCompleter {
         String formattedStart = startTime.format(timeFormatter);
 
         if (now.isBefore(startInstant)) {
-            player.sendMessage(MiniMessage.miniMessage().deserialize(
-                    "<blue>[Rush] Le Rush (Ressource: <gold>" + resource + "</gold>) commencera à <yellow>" + formattedStart + "</yellow> pour une durée de <yellow>" + duration + "</yellow> minutes.\nTapez <green>/rush join</green> pour participer !</blue>"
-            ));
+            player.sendMessage(getMessage("rush-status-announced", 
+                    "<blue>[Rush] Le Rush (Ressource: <gold>%resource%</gold>) commencera à <yellow>%time%</yellow> pour une durée de <yellow>%duration%</yellow> minutes.\nTapez <green>/rush join</green> pour participer !</blue>",
+                    Map.of("%resource%", resource, "%time%", formattedStart, "%duration%", String.valueOf(duration))));
         } else if (now.isAfter(endInstant)) {
-            player.sendMessage(MiniMessage.miniMessage().deserialize(
-                    "<blue>[Rush] L'événement d'aujourd'hui est terminé !</blue>"
-            ));
+            player.sendMessage(getMessage("rush-status-finished", "<blue>[Rush] L'événement d'aujourd'hui est terminé !</blue>"));
         } else {
             double score = rushManager.getPlayerScore(player.getUniqueId());
             boolean isRegistered = score >= 0.0 && rushManager.getRegisteredPlayersCount() > 0; // Simple approximation or check
@@ -121,23 +127,22 @@ public class RushCommand implements CommandExecutor, TabCompleter {
             if (remainingMinutes < 1) remainingMinutes = 1;
 
             if (isRegistered) {
-                player.sendMessage(MiniMessage.miniMessage().deserialize(
-                        "<blue>[Rush] L'événement est en cours ! Temps restant : <yellow>" + remainingMinutes + "</yellow> minutes.\nVotre Score actuel : <gold>" + String.format("%.0f", score) + "</gold></blue>"
-                ));
+                player.sendMessage(getMessage("rush-status-active-registered", 
+                        "<blue>[Rush] L'événement est en cours ! Temps restant : <yellow>%time%</yellow> minutes.\nVotre Score actuel : <gold>%score%</gold></blue>",
+                        Map.of("%time%", String.valueOf(remainingMinutes), "%score%", String.format("%.0f", score))));
             } else {
-                player.sendMessage(MiniMessage.miniMessage().deserialize(
-                        "<blue>[Rush] L'événement est en cours ! Temps restant : <yellow>" + remainingMinutes + "</yellow> minutes.\nVous n'êtes pas inscrit ! Tapez <green>/rush join</green> pour commencer à marquer des points !</blue>"
-                ));
+                player.sendMessage(getMessage("rush-status-active-unregistered", 
+                        "<blue>[Rush] L'événement est en cours ! Temps restant : <yellow>%time%</yellow> minutes.\nVous n'êtes pas inscrit ! Tapez <green>/rush join</green> pour commencer à marquer des points !</blue>",
+                        Map.of("%time%", String.valueOf(remainingMinutes))));
             }
         }
     }
 
     private void sendHelp(Player player) {
-        player.sendMessage(MiniMessage.miniMessage().deserialize(
+        player.sendMessage(getMessage("rush-help", 
                 "<blue>[Rush] Commandes disponibles :\n" +
                 " - <yellow>/rush join</yellow> : S'inscrire au Rush quotidien.\n" +
-                " - <yellow>/rush status</yellow> : Voir le statut du Rush du jour.</blue>"
-        ));
+                " - <yellow>/rush status</yellow> : Voir le statut du Rush du jour.</blue>"));
     }
 
     @Override
