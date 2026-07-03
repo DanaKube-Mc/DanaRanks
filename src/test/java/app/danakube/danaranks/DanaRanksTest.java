@@ -1,12 +1,14 @@
 package app.danakube.danaranks;
 
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import net.kyori.adventure.text.Component;
 
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -199,7 +201,7 @@ public class DanaRanksTest {
         assertEquals("§aVotre profil de rang a été correctement chargé !",
                 manager.getMessage("profile-loaded"));
 
-        net.kyori.adventure.text.Component kickComponent = manager.getMessageComponent("kick-database-error");
+        Component kickComponent = manager.getMessageComponent("kick-database-error");
         assertNotNull(kickComponent);
 
         assertEquals("§cFallback", manager.getMessage("non-existent-key", "<red>Fallback"));
@@ -208,7 +210,7 @@ public class DanaRanksTest {
     @Test
     public void testImmediateBaseEloReward() {
         QuotaManager qm = new QuotaManager();
-        org.bukkit.configuration.file.YamlConfiguration config = new org.bukkit.configuration.file.YamlConfiguration();
+        YamlConfiguration config = new YamlConfiguration();
         config.set("quotas-settings.base-rank-1.objectives.lumens-gained.target", 1000);
         config.set("quotas-settings.base-rank-1.objectives.lumens-gained.base-elo", 5);
         config.set("quotas-settings.base-rank-1.objectives.lumens-gained.max-surplus-elo", 10);
@@ -217,17 +219,14 @@ public class DanaRanksTest {
         PlayerProfile profile = new PlayerProfile(UUID.randomUUID(), "Player1", 1, 0, Instant.now(), new HashMap<>());
         qm.resetQuotaProgress(profile, 1);
 
-        // Progression de 999 : pas d'ELO de base
         qm.incrementProgress(profile, "lumens_gained", 999);
         assertEquals(0, profile.getElo());
         assertFalse(qm.isBaseRewarded(profile, "lumens_gained"));
 
-        // Progression à 1000 : gain immédiat de +5 ELO
         qm.incrementProgress(profile, "lumens_gained", 1);
         assertEquals(5, profile.getElo());
         assertTrue(qm.isBaseRewarded(profile, "lumens_gained"));
 
-        // Plus de gain d'ELO de base si progression continue
         qm.incrementProgress(profile, "lumens_gained", 500);
         assertEquals(5, profile.getElo());
     }
@@ -235,7 +234,7 @@ public class DanaRanksTest {
     @Test
     public void testSurplusCalculationAtReset() {
         QuotaManager qm = new QuotaManager();
-        org.bukkit.configuration.file.YamlConfiguration config = new org.bukkit.configuration.file.YamlConfiguration();
+        YamlConfiguration config = new YamlConfiguration();
         config.set("quotas-settings.base-rank-1.objectives.lumens-gained.target", 1000);
         config.set("quotas-settings.base-rank-1.objectives.lumens-gained.base-elo", 5);
         config.set("quotas-settings.base-rank-1.objectives.lumens-gained.max-surplus-elo", 10);
@@ -245,21 +244,17 @@ public class DanaRanksTest {
         PlayerProfile profile = new PlayerProfile(UUID.randomUUID(), "Player2", 1, 0, Instant.now(), new HashMap<>());
         qm.resetQuotaProgress(profile, 1);
 
-        // Progression à 5500 Lumens (target = 1000, base-elo = 5 distribué immédiatement)
         qm.incrementProgress(profile, "lumens_gained", 5500);
-        assertEquals(5, profile.getElo()); // Seul ELO de base donné immédiatement
+        assertEquals(5, profile.getElo());
         
-        // Exécution du reset global
         qm.processGlobalReset(profile, Instant.now());
-        // Doit rapporter +3 ELO de surplus (2.5 arrondi au-dessus)
-        // ELO final: 5 (base) + 3 (surplus) = 8 ELO.
         assertEquals(8, profile.getElo());
     }
 
     @Test
     public void testNoQuotaReloadOnRankUp() {
         QuotaManager qm = new QuotaManager();
-        org.bukkit.configuration.file.YamlConfiguration config = new org.bukkit.configuration.file.YamlConfiguration();
+        YamlConfiguration config = new YamlConfiguration();
         config.set("quotas-settings.scaling.multiplier-per-rank", 1.15);
         config.set("quotas-settings.base-rank-1.objectives.lumens-gained.target", 1000);
         qm.loadConfig(config, null);
@@ -267,15 +262,12 @@ public class DanaRanksTest {
         PlayerProfile profile = new PlayerProfile(UUID.randomUUID(), "Player3", 4, 90, Instant.now(), new HashMap<>());
         qm.resetQuotaProgress(profile, 4);
 
-        // Target pour le rang 4 : 1000 * 1.15^3 = 1521
         double targetRank4 = qm.getObjectiveConfig(4, "lumens_gained").getTarget();
         assertEquals(1521.0, targetRank4);
 
-        // Le joueur passe Rang 5
         profile.addElo(20);
         assertEquals(5, profile.getRankLevel());
 
-        // Son quota actif doit rester configuré sur les valeurs du Rang 4 (target = 1521)
         int activeRank = qm.getActiveQuotaRank(profile);
         assertEquals(4, activeRank);
         assertEquals(1521.0, qm.getObjectiveConfig(activeRank, "lumens_gained").getTarget());
@@ -284,17 +276,14 @@ public class DanaRanksTest {
     @Test
     public void testResetCalculation() {
         QuotaManager qm = new QuotaManager();
-        org.bukkit.configuration.file.YamlConfiguration config = new org.bukkit.configuration.file.YamlConfiguration();
+        YamlConfiguration config = new YamlConfiguration();
         config.set("reset.reference-date", "2026-07-03");
         config.set("reset.hour", 4);
         qm.loadConfig(config, null);
 
-        // Simulation pour une période de 3 jours (Argent)
-        // Date actuelle : 2026-07-04 à 12:00:00 UTC
         Instant now = Instant.parse("2026-07-04T12:00:00Z");
         Instant nextReset = qm.getNextResetInstant(3, now);
 
-        // Le reset doit avoir lieu exactement le 2026-07-06 à 04:00:00
         Instant expected = LocalDateTime.of(2026, 7, 6, 4, 0)
                 .atZone(java.time.ZoneId.systemDefault())
                 .toInstant();
@@ -304,45 +293,37 @@ public class DanaRanksTest {
     @Test
     public void testProportionalLoss() {
         QuotaManager qm = new QuotaManager();
-        org.bukkit.configuration.file.YamlConfiguration config = new org.bukkit.configuration.file.YamlConfiguration();
+        YamlConfiguration config = new YamlConfiguration();
         config.set("quotas-settings.base-rank-1.objectives.job-xp.target", 1000);
         config.set("quotas-settings.base-rank-1.objectives.job-xp.base-elo", 5);
         config.set("quotas-settings.base-rank-1.objectives.job-xp.fail-penalty", 10);
         qm.loadConfig(config, null);
 
-        // Joueur de rang Argent (Niveau 3) - donc pénalités activées
-        // On initialise son rang au Rang 21 (Argent)
         PlayerProfile profile = new PlayerProfile(UUID.randomUUID(), "Player4", 21, 50, Instant.now(), new HashMap<>());
         
-        // Test 1: Progression = 650 XP (manque 35%). Pénalité = 10 * 35% = 3.5 ELO.
-        // Arrondi standard de 3.5 = 4 ELO.
-        qm.resetQuotaProgress(profile, 1); // objectifs basés sur base-rank-1 (scaled ou non)
-        // Pour s'assurer de la target 1000, on utilise un quota généré pour le Rang 1
+        qm.resetQuotaProgress(profile, 1);
         qm.setActiveQuotaRank(profile, 1);
         qm.incrementProgress(profile, "job_xp", 650);
         qm.processGlobalReset(profile, Instant.now());
-        assertEquals(46, profile.getElo()); // 50 - 4 = 46
+        assertEquals(46, profile.getElo());
 
-        // Test 2: Progression = 660 XP (manque 34%). Pénalité = 10 * 34% = 3.4 ELO.
-        // Arrondi standard de 3.4 = 3 ELO.
         PlayerProfile profile2 = new PlayerProfile(UUID.randomUUID(), "Player4_2", 21, 50, Instant.now(), new HashMap<>());
         qm.resetQuotaProgress(profile2, 1);
         qm.setActiveQuotaRank(profile2, 1);
         qm.incrementProgress(profile2, "job_xp", 660);
         qm.processGlobalReset(profile2, Instant.now());
-        assertEquals(47, profile2.getElo()); // 50 - 3 = 47
+        assertEquals(47, profile2.getElo());
     }
 
     @Test
     public void testConfigValidation() {
         QuotaManager qm = new QuotaManager();
-        org.bukkit.configuration.file.YamlConfiguration config = new org.bukkit.configuration.file.YamlConfiguration();
-        config.set("reset.hour", 25); // Invalide
-        config.set("reset.reference-date", "invalid-date-format"); // Invalide
-        config.set("quotas-settings.surplus-multiplier", -2.5); // Invalide
-        config.set("quotas-settings.scaling.multiplier-per-rank", 0.8); // Invalide
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("reset.hour", 25);
+        config.set("reset.reference-date", "invalid-date-format");
+        config.set("quotas-settings.surplus-multiplier", -2.5);
+        config.set("quotas-settings.scaling.multiplier-per-rank", 0.8);
 
-        // Le chargement ne doit pas planter et doit appliquer les fallbacks
         qm.loadConfig(config, null);
 
         assertEquals(4, qm.getResetHour());
@@ -354,7 +335,7 @@ public class DanaRanksTest {
     @Test
     public void testOfflineCatchUpMultipleCycles() {
         QuotaManager qm = new QuotaManager();
-        org.bukkit.configuration.file.YamlConfiguration config = new org.bukkit.configuration.file.YamlConfiguration();
+        YamlConfiguration config = new YamlConfiguration();
         config.set("reset.reference-date", "2026-07-03");
         config.set("reset.hour", 4);
         config.set("quotas-settings.base-rank-1.objectives.lumens-gained.target", 1000);
@@ -363,25 +344,17 @@ public class DanaRanksTest {
         config.set("quotas-settings.base-rank-1.objectives.job-xp.fail-penalty", 5);
         qm.loadConfig(config, null);
 
-        // Joueur Argent (Niveau 3, période = 3 jours) avec 25 ELO
-        // Rang 21
         PlayerProfile profile = new PlayerProfile(UUID.randomUUID(), "PlayerOffline", 21, 25, Instant.now(), new HashMap<>());
         
-        // Initialiser lastReset au 2026-07-03 04:00:00 (début de la période)
         Instant ref = LocalDateTime.of(2026, 7, 3, 4, 0)
                 .atZone(java.time.ZoneId.systemDefault())
                 .toInstant();
         profile.setLastReset(ref);
-        qm.resetQuotaProgress(profile, 1); // Quota du rang 1 (pénalité totale complète = 5 + 5 = 10 ELO)
+        qm.resetQuotaProgress(profile, 1);
 
-        // Connexion 15 jours plus tard (soit 5 cycles manqués, mais 3 cycles suffisent pour vider l'ELO)
-        Instant now = ref.plusSeconds(15L * 86400); // 15 jours plus tard
+        Instant now = ref.plusSeconds(15L * 86400);
 
         qm.handleOfflineCatchUp(profile, now);
-
-        // Cycles manqués : 15 jours / 3 jours = 5 cycles.
-        // ELO progression: 25 -> 15 (cycle 1) -> 5 (cycle 2) -> 0 (cycle 3, plancher) -> 0 -> 0.
-        // Le joueur doit se retrouver à 0 ELO du Rang 21 sans rétrogradation (il reste Rang 21).
         assertEquals(21, profile.getRankLevel());
         assertEquals(0, profile.getElo());
     }
@@ -389,7 +362,7 @@ public class DanaRanksTest {
     @Test
     public void testRank50PrestigeAndDecay() {
         QuotaManager qm = new QuotaManager();
-        org.bukkit.configuration.file.YamlConfiguration config = new org.bukkit.configuration.file.YamlConfiguration();
+        YamlConfiguration config = new YamlConfiguration();
         config.set("reset.reference-date", "2026-07-03");
         config.set("reset.hour", 4);
         config.set("quotas-settings.base-rank-1.objectives.lumens-gained.target", 1000);
@@ -398,36 +371,27 @@ public class DanaRanksTest {
         config.set("quotas-settings.base-rank-1.objectives.job-xp.fail-penalty", 5);
         qm.loadConfig(config, null);
 
-        // 1. Joueur Rang 50 avec 90 ELO gagne 150 ELO.
         PlayerProfile profile = new PlayerProfile(UUID.randomUUID(), "PrestigePlayer", 50, 90, Instant.now(), new HashMap<>());
         profile.addElo(150);
-        // Doit passer à 240 ELO au Rang 50 (Prestige illimité)
         assertEquals(50, profile.getRankLevel());
         assertEquals(240, profile.getElo());
 
-        // 2. Déconnexion de 100 jours (Rang 50 = Platine/Niveau 5, période = 5 jours, 20 cycles manqués).
-        // Pénalité d'échec par cycle = 5 + 5 = 10 ELO.
-        // 20 cycles * 10 ELO = 200 ELO de perte.
         Instant ref = LocalDateTime.of(2026, 7, 3, 4, 0)
                 .atZone(java.time.ZoneId.systemDefault())
                 .toInstant();
         profile.setLastReset(ref);
-        qm.resetQuotaProgress(profile, 1); // Quota avec échec à 10 ELO
+        qm.resetQuotaProgress(profile, 1);
 
-        Instant now = ref.plusSeconds(100L * 86400); // 100 jours plus tard
+        Instant now = ref.plusSeconds(100L * 86400);
 
         qm.handleOfflineCatchUp(profile, now);
-
-        // ELO final: 240 - 200 = 40 ELO au Rang 50.
         assertEquals(50, profile.getRankLevel());
         assertEquals(40, profile.getElo());
         
-        // 3. Déconnexion encore plus longue (pour atteindre et bloquer au plancher de 0 ELO)
         profile.setElo(50);
         profile.setLastReset(ref);
         qm.resetQuotaProgress(profile, 1);
         
-        // 100 jours plus tard (perte théorique de 200 ELO, mais bloqué au plancher 0 ELO du Rang 50)
         qm.handleOfflineCatchUp(profile, now);
         assertEquals(50, profile.getRankLevel());
         assertEquals(0, profile.getElo());
