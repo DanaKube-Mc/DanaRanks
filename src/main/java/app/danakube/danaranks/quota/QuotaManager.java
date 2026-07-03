@@ -3,7 +3,6 @@ package app.danakube.danaranks.quota;
 import app.danakube.danaranks.DanaRanks;
 import app.danakube.danaranks.profile.PlayerProfile;
 
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import java.time.Instant;
@@ -18,27 +17,11 @@ import java.util.logging.Logger;
 public class QuotaManager {
     private static QuotaManager instance;
 
-    private final Map<String, BaseObjective> baseObjectives = new HashMap<>();
+    private final QuotaGenerator quotaGenerator = new QuotaGenerator();
+    private ResetCalculator resetCalculator;
     private double surplusMultiplier = 10.0;
-    private double scalingMultiplierPerRank = 1.15;
     private String refDateStr = "2026-07-03";
     private int resetHour = 4;
-
-    private static class BaseObjective {
-        final String name;
-        final double baseTarget;
-        final int baseElo;
-        final int maxSurplusElo;
-        final int failPenalty;
-
-        BaseObjective(String name, double baseTarget, int baseElo, int maxSurplusElo, int failPenalty) {
-            this.name = name;
-            this.baseTarget = baseTarget;
-            this.baseElo = baseElo;
-            this.maxSurplusElo = maxSurplusElo;
-            this.failPenalty = failPenalty;
-        }
-    }
 
     public static QuotaManager getInstance() {
         return instance;
@@ -49,8 +32,7 @@ public class QuotaManager {
     }
 
     public QuotaManager() {
-        baseObjectives.put("lumens_gained", new BaseObjective("lumens_gained", 1000, 5, 10, 0));
-        baseObjectives.put("job_xp", new BaseObjective("job_xp", 500, 5, 10, 0));
+        this.resetCalculator = new ResetCalculator(refDateStr, resetHour);
     }
 
     public void loadConfig(FileConfiguration config, Logger logger) {
@@ -79,6 +61,8 @@ public class QuotaManager {
             this.refDateStr = "2026-07-03";
         }
 
+        this.resetCalculator = new ResetCalculator(refDateStr, resetHour);
+
         double mult = config.getDouble("quotas-settings.surplus-multiplier", 10.0);
         if (mult < 1.0) {
             if (logger != null) {
@@ -89,49 +73,15 @@ public class QuotaManager {
             this.surplusMultiplier = mult;
         }
 
-        double scaleMult = config.getDouble("quotas-settings.scaling.multiplier-per-rank", 1.15);
-        if (scaleMult < 1.0) {
-            if (logger != null) {
-                logger.warning("[DanaRanks] Invalid quotas-settings.scaling.multiplier-per-rank: " + scaleMult + ". Using default: 1.15");
-            }
-            this.scalingMultiplierPerRank = 1.15;
-        } else {
-            this.scalingMultiplierPerRank = scaleMult;
-        }
-
-        if (config.contains("quotas-settings.base-rank-1.objectives")) {
-            baseObjectives.clear();
-            ConfigurationSection section = config.getConfigurationSection("quotas-settings.base-rank-1.objectives");
-            if (section != null) {
-                for (String key : section.getKeys(false)) {
-                    String path = "quotas-settings.base-rank-1.objectives." + key;
-                    double target = config.getDouble(path + ".target", 1000);
-                    int baseElo = config.getInt(path + ".base-elo", 5);
-                    int maxSurplus = config.getInt(path + ".max-surplus-elo", 10);
-                    int failPen = config.getInt(path + ".fail-penalty", 0);
-                    
-                    String normalizedKey = key.replace("-", "_");
-                    baseObjectives.put(normalizedKey, new BaseObjective(normalizedKey, target, baseElo, maxSurplus, failPen));
-                }
-            }
-        }
+        quotaGenerator.loadConfig(config, logger);
     }
 
     public Map<String, ObjectiveConfig> getObjectivesForRank(int rank) {
-        Map<String, ObjectiveConfig> map = new HashMap<>();
-        for (BaseObjective base : baseObjectives.values()) {
-            double scaledTarget = Math.round(base.baseTarget * Math.pow(scalingMultiplierPerRank, rank - 1));
-            map.put(base.name, new ObjectiveConfig(base.name, scaledTarget, base.baseElo, base.maxSurplusElo, base.failPenalty));
-        }
-        return map;
+        return quotaGenerator.getObjectivesForRank(rank);
     }
 
     public ObjectiveConfig getObjectiveConfig(int rank, String resource) {
-        String normalizedResource = resource.replace("-", "_");
-        BaseObjective base = baseObjectives.get(normalizedResource);
-        if (base == null) return null;
-        double scaledTarget = Math.round(base.baseTarget * Math.pow(scalingMultiplierPerRank, rank - 1));
-        return new ObjectiveConfig(base.name, scaledTarget, base.baseElo, base.maxSurplusElo, base.failPenalty);
+        return quotaGenerator.getObjectiveConfig(rank, resource);
     }
 
     public int getLevelFromRank(int rankLevel) {
@@ -143,83 +93,19 @@ public class QuotaManager {
     }
 
     public int getPeriodDays(int level) {
-        switch (level) {
-            case 1: return 1;
-            case 2: return 2;
-            case 3: return 3;
-            case 4: return 4;
-            case 5: return 5;
-            default: return 1;
-        }
+        return resetCalculator.getPeriodDays(level);
     }
 
     public Instant getNextResetInstant(int periodDays, Instant now) {
-        LocalDateTime refDateTime = LocalDateTime.of(LocalDate.parse(refDateStr), LocalTime.of(resetHour, 0));
-        Instant refInstant = refDateTime.atZone(ZoneId.systemDefault()).toInstant();
-
-        long secondsBetween = now.getEpochSecond() - refInstant.getEpochSecond();
-        long joursEcoules;
-        if (secondsBetween < 0) {
-            joursEcoules = (long) Math.floor((double) secondsBetween / 86400.0);
-        } else {
-            joursEcoules = secondsBetween / 86400;
-        }
-
-        long prochainResetJours;
-        if (joursEcoules < 0) {
-            prochainResetJours = ((joursEcoules / periodDays)) * periodDays;
-        } else {
-            prochainResetJours = ((joursEcoules / periodDays) + 1) * periodDays;
-        }
-
-        return refInstant.plusSeconds(prochainResetJours * 86400);
+        return resetCalculator.getNextResetInstant(periodDays, now);
     }
 
     public Instant getLastResetEffectiveInstant(int level, Instant now) {
-        int periodDays = getPeriodDays(level);
-        LocalDateTime refDateTime = LocalDateTime.of(LocalDate.parse(refDateStr), LocalTime.of(resetHour, 0));
-        Instant refInstant = refDateTime.atZone(ZoneId.systemDefault()).toInstant();
-
-        long secondsBetween = now.getEpochSecond() - refInstant.getEpochSecond();
-        long joursEcoules;
-        if (secondsBetween < 0) {
-            joursEcoules = (long) Math.floor((double) secondsBetween / 86400.0);
-        } else {
-            joursEcoules = secondsBetween / 86400;
-        }
-
-        long dernierResetJours;
-        if (joursEcoules < 0) {
-            dernierResetJours = ((joursEcoules / periodDays) - 1) * periodDays;
-        } else {
-            dernierResetJours = (joursEcoules / periodDays) * periodDays;
-        }
-
-        return refInstant.plusSeconds(dernierResetJours * 86400);
+        return resetCalculator.getLastResetEffectiveInstant(level, now);
     }
 
     public int getMissedCycles(int level, Instant lastReset, Instant now) {
-        int periodDays = getPeriodDays(level);
-        LocalDateTime refDateTime = LocalDateTime.of(LocalDate.parse(refDateStr), LocalTime.of(resetHour, 0));
-        Instant refInstant = refDateTime.atZone(ZoneId.systemDefault()).toInstant();
-
-        long lastResetSeconds = lastReset.getEpochSecond() - refInstant.getEpochSecond();
-        long nowSeconds = now.getEpochSecond() - refInstant.getEpochSecond();
-
-        long lastResetDays = lastResetSeconds < 0 ? (long) Math.floor((double) lastResetSeconds / 86400.0) : lastResetSeconds / 86400;
-        long nowDays = nowSeconds < 0 ? (long) Math.floor((double) nowSeconds / 86400.0) : nowSeconds / 86400;
-
-        long kLast = lastResetDays / periodDays;
-        long kNow = nowDays / periodDays;
-
-        if (lastResetDays < 0) {
-            kLast = (long) Math.floor((double) lastResetDays / periodDays);
-        }
-        if (nowDays < 0) {
-            kNow = (long) Math.floor((double) nowDays / periodDays);
-        }
-
-        return (int) Math.max(0, kNow - kLast);
+        return resetCalculator.getMissedCycles(level, lastReset, now);
     }
 
     public int getActiveQuotaRank(PlayerProfile profile) {
@@ -465,7 +351,7 @@ public class QuotaManager {
     }
 
     public double getScalingMultiplierPerRank() {
-        return scalingMultiplierPerRank;
+        return quotaGenerator.getScalingMultiplierPerRank();
     }
 
     public String getRefDateStr() {
@@ -474,5 +360,13 @@ public class QuotaManager {
 
     public int getResetHour() {
         return resetHour;
+    }
+
+    public QuotaGenerator getQuotaGenerator() {
+        return quotaGenerator;
+    }
+
+    public ResetCalculator getResetCalculator() {
+        return resetCalculator;
     }
 }

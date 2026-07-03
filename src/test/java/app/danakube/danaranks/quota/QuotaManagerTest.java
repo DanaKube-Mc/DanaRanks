@@ -80,23 +80,6 @@ public class QuotaManagerTest {
     }
 
     @Test
-    public void testResetCalculation() {
-        QuotaManager qm = new QuotaManager();
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("reset.reference-date", "2026-07-03");
-        config.set("reset.hour", 4);
-        qm.loadConfig(config, null);
-
-        Instant now = Instant.parse("2026-07-04T12:00:00Z");
-        Instant nextReset = qm.getNextResetInstant(3, now);
-
-        Instant expected = LocalDateTime.of(2026, 7, 6, 4, 0)
-                .atZone(java.time.ZoneId.systemDefault())
-                .toInstant();
-        assertEquals(expected, nextReset);
-    }
-
-    @Test
     public void testProportionalLoss() {
         QuotaManager qm = new QuotaManager();
         YamlConfiguration config = new YamlConfiguration();

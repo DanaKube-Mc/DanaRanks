@@ -1,7 +1,6 @@
-package app.danakube.danaranks.command;
+package app.danakube.danaranks.rush;
 
 import app.danakube.danaranks.DanaRanks;
-import app.danakube.danaranks.quota.RushManager;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -121,7 +120,7 @@ public class RushCommand implements CommandExecutor, TabCompleter {
             player.sendMessage(getMessage("rush-status-finished", "<blue>[Rush] L'événement d'aujourd'hui est terminé !</blue>"));
         } else {
             double score = rushManager.getPlayerScore(player.getUniqueId());
-            boolean isRegistered = score >= 0.0 && rushManager.getRegisteredPlayersCount() > 0; // Simple approximation or check
+            boolean isRegistered = score >= 0.0 && rushManager.getRegisteredPlayersCount() > 0;
             
             long remainingMinutes = (endInstant.getEpochSecond() - now.getEpochSecond()) / 60;
             if (remainingMinutes < 1) remainingMinutes = 1;

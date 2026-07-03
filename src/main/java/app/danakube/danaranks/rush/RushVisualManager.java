@@ -1,4 +1,4 @@
-package app.danakube.danaranks.tracker;
+package app.danakube.danaranks.rush;
 
 import app.danakube.danaranks.DanaRanks;
 import net.kyori.adventure.bossbar.BossBar;

@@ -1,4 +1,4 @@
-package app.danakube.danaranks.quota;
+package app.danakube.danaranks.rush;
 
 import app.danakube.danaranks.database.DatabaseManager;
 import app.danakube.danaranks.profile.PlayerProfile;

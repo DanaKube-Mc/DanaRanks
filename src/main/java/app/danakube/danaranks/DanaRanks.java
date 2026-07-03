@@ -13,8 +13,8 @@ import app.danakube.danaranks.tracker.ToolXpTracker;
 import app.danakube.danaranks.tracker.TrackerRegistry;
 import app.danakube.danaranks.tracker.VanillaXpTracker;
 
-import app.danakube.danaranks.quota.RushManager;
-import app.danakube.danaranks.command.RushCommand;
+import app.danakube.danaranks.rush.RushManager;
+import app.danakube.danaranks.rush.RushCommand;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 

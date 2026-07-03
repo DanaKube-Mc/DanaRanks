@@ -1,19 +1,14 @@
-package app.danakube.danaranks.quota;
+package app.danakube.danaranks.rush;
 
 import app.danakube.danaranks.DanaRanks;
 import app.danakube.danaranks.database.DatabaseManager;
 import app.danakube.danaranks.profile.PlayerProfile;
-import app.danakube.danaranks.tracker.RushVisualManager;
+import app.danakube.danaranks.util.DiscordWebhookSender;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -346,13 +341,6 @@ public class RushManager {
             return CompletableFuture.completedFuture(null);
         }
 
-        Map<String, List<PlayerProfile>> tiers = new HashMap<>();
-        tiers.put("fer", new ArrayList<>());
-        tiers.put("bronze", new ArrayList<>());
-        tiers.put("argent", new ArrayList<>());
-        tiers.put("or", new ArrayList<>());
-        tiers.put("platine", new ArrayList<>());
-
         List<PlayerProfile> resolvedProfiles = new ArrayList<>();
         List<CompletableFuture<Void>> futures = new ArrayList<>();
 
@@ -364,7 +352,6 @@ public class RushManager {
             if (profile != null) {
                 resolvedProfiles.add(profile);
             } else if (getDatabaseManager() != null) {
-                final UUID finalUuid = uuid;
                 CompletableFuture<Void> fut = getDatabaseManager().loadProfile(uuid, "OfflinePlayer")
                         .thenAccept(offlineProfile -> {
                             synchronized (resolvedProfiles) {
@@ -399,96 +386,33 @@ public class RushManager {
         return MiniMessage.miniMessage().deserialize(raw);
     }
 
-    private Map<String, List<PlayerProfile>> groupProfilesByTier(List<PlayerProfile> profiles) {
-        Map<String, List<PlayerProfile>> tiers = new HashMap<>();
-        tiers.put("fer", new ArrayList<>());
-        tiers.put("bronze", new ArrayList<>());
-        tiers.put("argent", new ArrayList<>());
-        tiers.put("or", new ArrayList<>());
-        tiers.put("platine", new ArrayList<>());
-
-        for (PlayerProfile profile : profiles) {
-            String tierName = getTierName(profile.getRankLevel());
-            tiers.get(tierName).add(profile);
-        }
-        return tiers;
-    }
-
-    private void calculateIntraRankEloChanges(List<PlayerProfile> tierPlayers, Map<UUID, Double> scores, double eloFactor, Map<UUID, Integer> eloChanges) {
-        double maxScore = 0;
-        for (PlayerProfile p : tierPlayers) {
-            double s = scores.getOrDefault(p.getUuid(), 0.0);
-            if (s > maxScore) maxScore = s;
+    private CompletableFuture<Void> processEloRedistribution(List<PlayerProfile> profiles, Map<UUID, Double> scores) {
+        Map<String, RushEloCalculator.TierSettings> calculatorSettings = new HashMap<>();
+        for (Map.Entry<String, RankSetting> entry : rankSettings.entrySet()) {
+            RankSetting s = entry.getValue();
+            calculatorSettings.put(entry.getKey(), new RushEloCalculator.TierSettings(s.eloFactor, s.gainMultiplier, s.lossMultiplier));
         }
 
-        if (maxScore == 0.0) {
-            for (PlayerProfile p : tierPlayers) {
-                eloChanges.put(p.getUuid(), 0);
-            }
-        } else {
-            double sumR = 0;
-            Map<UUID, Double> rValues = new HashMap<>();
-            for (PlayerProfile p : tierPlayers) {
-                double r = scores.getOrDefault(p.getUuid(), 0.0) / maxScore;
-                rValues.put(p.getUuid(), r);
-                sumR += r;
-            }
-            double meanR = sumR / tierPlayers.size();
+        Map<String, List<PlayerProfile>> tiers = RushEloCalculator.groupProfilesByTier(profiles);
+        List<PlayerProfile> orphans = new ArrayList<>();
+        Map<UUID, Integer> eloChanges = new HashMap<>();
 
-            for (PlayerProfile p : tierPlayers) {
-                double d = rValues.get(p.getUuid()) - meanR;
-                d = Math.round(d * 1000000.0) / 1000000.0;
-                double changeRaw = eloFactor * d;
-                int change = (changeRaw >= 0) ? (int) Math.round(changeRaw) : -((int) Math.round(Math.abs(changeRaw)));
-                eloChanges.put(p.getUuid(), change);
+        for (Map.Entry<String, List<PlayerProfile>> entry : tiers.entrySet()) {
+            String tier = entry.getKey();
+            List<PlayerProfile> tierPlayers = entry.getValue();
+            RushEloCalculator.TierSettings settings = calculatorSettings.get(tier);
+            double eloFactor = settings != null ? settings.getEloFactor() : 30.0;
+
+            if (tierPlayers.size() >= 2) {
+                RushEloCalculator.calculateIntraRankEloChanges(tierPlayers, scores, eloFactor, eloChanges);
+            } else if (tierPlayers.size() == 1) {
+                orphans.add(tierPlayers.getFirst());
             }
         }
-    }
 
-    private void calculateOrphanEloChanges(List<PlayerProfile> orphans, Map<UUID, Double> scores, Map<UUID, Integer> eloChanges) {
-        if (orphans.size() >= 2) {
-            double maxScore = 0;
-            for (PlayerProfile p : orphans) {
-                double s = scores.getOrDefault(p.getUuid(), 0.0);
-                if (s > maxScore) maxScore = s;
-            }
+        RushEloCalculator.calculateOrphanEloChanges(orphans, scores, eloChanges, calculatorSettings);
 
-            if (maxScore == 0.0) {
-                for (PlayerProfile p : orphans) {
-                    eloChanges.put(p.getUuid(), 0);
-                }
-            } else {
-                double sumR = 0;
-                Map<UUID, Double> rValues = new HashMap<>();
-                for (PlayerProfile p : orphans) {
-                    double r = scores.getOrDefault(p.getUuid(), 0.0) / maxScore;
-                    rValues.put(p.getUuid(), r);
-                    sumR += r;
-                }
-                double meanR = sumR / orphans.size();
-
-                for (PlayerProfile p : orphans) {
-                    double d = rValues.get(p.getUuid()) - meanR;
-                    d = Math.round(d * 1000000.0) / 1000000.0;
-                    double changeRaw = 30.0 * d;
-                    int changeRawInt = (changeRaw >= 0) ? (int) Math.round(changeRaw) : -((int) Math.round(Math.abs(changeRaw)));
-
-                    String tier = getTierName(p.getRankLevel());
-                    RankSetting settings = rankSettings.get(tier);
-                    double mult = 1.0;
-                    if (settings != null) {
-                        mult = (changeRawInt >= 0) ? settings.gainMultiplier : settings.lossMultiplier;
-                    }
-
-                    double finalChangeRaw = changeRawInt * mult;
-                    int finalChange = (finalChangeRaw >= 0) ? (int) Math.round(finalChangeRaw) : -((int) Math.round(Math.abs(finalChangeRaw)));
-
-                    eloChanges.put(p.getUuid(), finalChange);
-                }
-            }
-        } else if (orphans.size() == 1) {
-            eloChanges.put(orphans.getFirst().getUuid(), 0);
-        }
+        return applyAndSaveEloChanges(profiles, eloChanges);
     }
 
     private CompletableFuture<Void> applyAndSaveEloChanges(List<PlayerProfile> profiles, Map<UUID, Integer> eloChanges) {
@@ -533,37 +457,6 @@ public class RushManager {
         return CompletableFuture.allOf(dbFutures.toArray(new CompletableFuture[0]));
     }
 
-    private CompletableFuture<Void> processEloRedistribution(List<PlayerProfile> profiles, Map<UUID, Double> scores) {
-        Map<String, List<PlayerProfile>> tiers = groupProfilesByTier(profiles);
-        List<PlayerProfile> orphans = new ArrayList<>();
-        Map<UUID, Integer> eloChanges = new HashMap<>();
-
-        for (Map.Entry<String, List<PlayerProfile>> entry : tiers.entrySet()) {
-            String tier = entry.getKey();
-            List<PlayerProfile> tierPlayers = entry.getValue();
-            RankSetting settings = rankSettings.get(tier);
-            double eloFactor = settings != null ? settings.eloFactor : 30.0;
-
-            if (tierPlayers.size() >= 2) {
-                calculateIntraRankEloChanges(tierPlayers, scores, eloFactor, eloChanges);
-            } else if (tierPlayers.size() == 1) {
-                orphans.add(tierPlayers.getFirst());
-            }
-        }
-
-        calculateOrphanEloChanges(orphans, scores, eloChanges);
-
-        return applyAndSaveEloChanges(profiles, eloChanges);
-    }
-
-    private String getTierName(int rankLevel) {
-        if (rankLevel <= 10) return "fer";
-        if (rankLevel <= 20) return "bronze";
-        if (rankLevel <= 30) return "argent";
-        if (rankLevel <= 40) return "or";
-        return "platine";
-    }
-
     public CompletableFuture<Void> checkOfflineSummary(PlayerProfile profile, Consumer<String> messageSender) {
         if (profile.getQuotaProgress().containsKey("rush_pending_summary")) {
             String summary = (String) profile.getQuotaProgress().remove("rush_pending_summary");
@@ -584,33 +477,7 @@ public class RushManager {
     }
 
     private void sendDiscordWebhook(String content) {
-        if (discordWebhookUrl == null || discordWebhookUrl.isEmpty()) {
-            return;
-        }
-        CompletableFuture.runAsync(() -> {
-            try {
-                URL url = URI.create(discordWebhookUrl).toURL();
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Content-Type", "application/json");
-                conn.setDoOutput(true);
-
-                String json = "{\"content\": \"" + content + "\"}";
-                try (OutputStream os = conn.getOutputStream()) {
-                    byte[] input = json.getBytes(StandardCharsets.UTF_8);
-                    os.write(input, 0, input.length);
-                }
-
-                int code = conn.getResponseCode();
-                if (code >= 200 && code < 300) {
-                    // Success
-                } else {
-                    logger.warning("[Rush Webhook] Request failed: Status " + code);
-                }
-            } catch (Exception e) {
-                logger.warning("[Rush Webhook] Error sending discord webhook: " + e.getMessage());
-            }
-        });
+        DiscordWebhookSender.sendDiscordWebhook(discordWebhookUrl, content, logger);
     }
 
     private String formatTime(long seconds) {

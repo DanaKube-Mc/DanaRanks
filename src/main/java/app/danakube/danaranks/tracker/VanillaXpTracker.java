@@ -3,6 +3,7 @@ package app.danakube.danaranks.tracker;
 import app.danakube.danaranks.DanaRanks;
 import app.danakube.danaranks.profile.PlayerProfile;
 import app.danakube.danaranks.quota.QuotaManager;
+import app.danakube.danaranks.rush.RushManager;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
