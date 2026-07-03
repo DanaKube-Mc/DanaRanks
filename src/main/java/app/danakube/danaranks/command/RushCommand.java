@@ -74,10 +74,7 @@ public class RushCommand implements CommandExecutor, TabCompleter {
                     "<green>[Rush] Inscription réussie ! Votre score commence à 0. Bonne chance !</green>"
             ));
         } else {
-            // Check if already registered
             if (rushManager.getPlayerScore(player.getUniqueId()) >= 0.0 && rushManager.getRegisteredPlayersCount() > 0) {
-                // Technically registerPlayer returns false if already registered
-                // We double check score presence
                 player.sendMessage(MiniMessage.miniMessage().deserialize(
                         "<yellow>[Rush] Vous êtes déjà inscrit à l'événement du jour !</yellow>"
                 ));
@@ -117,7 +114,6 @@ public class RushCommand implements CommandExecutor, TabCompleter {
                     "<blue>[Rush] L'événement d'aujourd'hui est terminé !</blue>"
             ));
         } else {
-            // Rush active
             double score = rushManager.getPlayerScore(player.getUniqueId());
             boolean isRegistered = score >= 0.0 && rushManager.getRegisteredPlayersCount() > 0; // Simple approximation or check
             

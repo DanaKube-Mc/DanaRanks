@@ -21,14 +21,12 @@ public class LumensGainedTracker implements ResourceTracker {
         if (player == null) return;
 
         double amount = event.getAmount();
-        // Ne conserve que les gains
         if (amount <= 0) return;
 
         String reason = event.getReason();
         if (reason == null) return;
         reason = reason.toLowerCase();
 
-        // Filtre : jobs ou ventes à l'admin shop
         if (reason.contains("job") || reason.contains("admin_shop") || reason.contains("shop")) {
             DanaRanks plugin = DanaRanks.getInstance();
             if (plugin != null) {

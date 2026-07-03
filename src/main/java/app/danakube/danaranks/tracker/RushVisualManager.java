@@ -16,13 +16,11 @@ public class RushVisualManager {
 
     private final DanaRanks plugin;
     
-    // Boss bar d'annonce globale
     private BossBar announceBar;
     private String announceTitleTemplate;
     private BossBar.Color announceColor;
     private BossBar.Overlay announceOverlay;
 
-    // Boss bars actives pour chaque joueur inscrit
     private final Map<UUID, BossBar> activeBars = new HashMap<>();
     private String activeTitleTemplate;
     private BossBar.Color activeColor;
@@ -33,14 +31,12 @@ public class RushVisualManager {
     }
 
     public void loadConfig(FileConfiguration config) {
-        // Annonce
         String announceColStr = config.getString("rush.bossbar.announce.color", "BLUE");
         String announceStyleStr = config.getString("rush.bossbar.announce.style", "PROGRESS");
         this.announceTitleTemplate = config.getString("rush.bossbar.announce.title", "<blue>[Rush] Début du Rush dans %time% (Ressource: %resource%) - Tapez /rush join !");
         this.announceColor = parseColor(announceColStr);
         this.announceOverlay = parseOverlay(announceStyleStr);
 
-        // Active
         String activeColStr = config.getString("rush.bossbar.active.color", "RED");
         String activeStyleStr = config.getString("rush.bossbar.active.style", "PROGRESS");
         this.activeTitleTemplate = config.getString("rush.bossbar.active.title", "<red>[Rush] Temps restant : %time% - Votre Score : <gold>%score%</gold>");
@@ -77,7 +73,6 @@ public class RushVisualManager {
             announceBar.name(title);
         }
 
-        // Montrer à tous les joueurs en ligne
         for (Player player : Bukkit.getOnlinePlayers()) {
             player.showBossBar(announceBar);
         }
@@ -110,7 +105,7 @@ public class RushVisualManager {
         } else {
             bar.name(title);
             bar.progress(safeProgress);
-            player.showBossBar(bar); // S'assurer qu'elle s'affiche s'il vient de se reconnecter
+            player.showBossBar(bar);
         }
     }
 

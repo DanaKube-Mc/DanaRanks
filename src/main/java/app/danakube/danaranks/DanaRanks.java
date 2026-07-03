@@ -49,7 +49,6 @@ public final class DanaRanks extends JavaPlugin {
 
         messageManager = new MessageManager(this);
 
-        // Initialize QuotaManager and TrackerRegistry
         quotaManager = new QuotaManager();
         quotaManager.loadConfig(config, getLogger());
         QuotaManager.setInstance(quotaManager);
@@ -93,12 +92,10 @@ public final class DanaRanks extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new PlayerConnectionListener(this), this);
 
-        // Initialize RushManager
         rushManager = new RushManager(this);
         rushManager.loadConfig(config);
         rushManager.startScheduler();
 
-        // Register Command
         getCommand("rush").setExecutor(new RushCommand(this, rushManager));
 
         getLogger().info(messageManager.getMessage("plugin-enabled", "DanaRanks has been enabled!"));

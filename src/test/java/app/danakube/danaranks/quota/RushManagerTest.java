@@ -23,7 +23,6 @@ public class RushManagerTest {
 
     @BeforeEach
     public void setUp() {
-        // Use a real in-memory SQLite database
         dbManager = new DatabaseManager("jdbc:sqlite::memory:");
         profileCache = new HashMap<>();
 
@@ -87,7 +86,6 @@ public class RushManagerTest {
         int duration = rushManager.getDurationMinutes();
         assertTrue(duration >= 20 && duration <= 60);
         
-        // Les inscriptions sont bien ouvertes
         Instant nowInstant = time0800.atZone(ZoneId.systemDefault()).toInstant();
         assertTrue(rushManager.isRegistrationOpen(nowInstant));
         assertEquals(0, rushManager.getRegisteredPlayersCount());
@@ -102,28 +100,23 @@ public class RushManagerTest {
         Instant startInstant = start.atZone(ZoneId.systemDefault()).toInstant();
         int duration = rushManager.getDurationMinutes();
         
-        // Joueur s'inscrit en retard (15 minutes après le début)
         Instant lateTime = startInstant.plusSeconds(15 * 60);
         UUID p1 = UUID.randomUUID();
         
-        // Progression effectuée avant le rush ou avant son inscription : ne doit pas compter
         rushManager.handleResourceGain(p1, rushManager.getDailyResource(), 500, startInstant.minusSeconds(10));
         
         assertTrue(rushManager.registerPlayer(p1, lateTime));
         assertEquals(0.0, rushManager.getPlayerScore(p1));
         
-        // Progression après inscription
         rushManager.handleResourceGain(p1, rushManager.getDailyResource(), 100, lateTime.plusSeconds(10));
         assertEquals(100.0, rushManager.getPlayerScore(p1));
 
-        // Inscription après la fin du Rush
         Instant afterRush = startInstant.plusSeconds((duration + 5) * 60);
         UUID p2 = UUID.randomUUID();
         assertFalse(rushManager.registerPlayer(p2, afterRush));
 
-        // Progression après la fin du Rush
         rushManager.handleResourceGain(p1, rushManager.getDailyResource(), 100, afterRush);
-        assertEquals(100.0, rushManager.getPlayerScore(p1)); // score inchangé
+        assertEquals(100.0, rushManager.getPlayerScore(p1));
     }
 
     @Test
@@ -136,7 +129,6 @@ public class RushManagerTest {
         int duration = rushManager.getDurationMinutes();
         Instant endInstant = startInstant.plusSeconds(duration * 60);
 
-        // 4 joueurs de même rang (Fer = niveau 1 à 10)
         UUID p1 = UUID.randomUUID();
         UUID p2 = UUID.randomUUID();
         UUID p3 = UUID.randomUUID();
@@ -159,7 +151,6 @@ public class RushManagerTest {
         rushManager.registerPlayer(p3, startInstant);
         rushManager.registerPlayer(p4, startInstant);
 
-        // Simuler scores : S1=1000, S2=900, S3=450, S4=50
         String res = rushManager.getDailyResource();
         rushManager.handleResourceGain(p1, res, 1000, startInstant.plusSeconds(5));
         rushManager.handleResourceGain(p2, res, 900, startInstant.plusSeconds(5));
@@ -168,12 +159,10 @@ public class RushManagerTest {
 
         rushManager.endRush(endInstant).join();
 
-        // P1: +20, P2: +15, P3: -8, P4: -28
         assertEquals(20, prof1.getElo());
         assertEquals(15, prof2.getElo());
-        assertEquals(0, prof3.getElo()); // Commencé à 0 ELO, donc plancher de sécurité bloque à 0 (0 ELO de départ - 8 = -8 -> bloqué à 0)
+        assertEquals(0, prof3.getElo());
         
-        // Mettons un ELO de départ de 50 à tout le monde pour tester les variations exactes sans plancher
         prof1.setElo(50); prof2.setElo(50); prof3.setElo(50); prof4.setElo(50);
         rushManager.setupDaily(time0800);
         res = rushManager.getDailyResource();
@@ -192,10 +181,10 @@ public class RushManagerTest {
         
         rushManager.endRush(endInstant).join();
 
-        assertEquals(70, prof1.getElo());  // 50 + 20 = 70
-        assertEquals(65, prof2.getElo());  // 50 + 15 = 65
-        assertEquals(42, prof3.getElo());  // 50 - 8 = 42
-        assertEquals(22, prof4.getElo());  // 50 - 28 = 22
+        assertEquals(70, prof1.getElo());
+        assertEquals(65, prof2.getElo());
+        assertEquals(42, prof3.getElo());
+        assertEquals(22, prof4.getElo());
     }
 
     @Test
@@ -208,7 +197,6 @@ public class RushManagerTest {
         int duration = rushManager.getDurationMinutes();
         Instant endInstant = startInstant.plusSeconds(duration * 60);
 
-        // 2 Platine (niveau 41 à 50, elo-factor = 15.0)
         UUID p1 = UUID.randomUUID();
         UUID p2 = UUID.randomUUID();
 
@@ -229,7 +217,6 @@ public class RushManagerTest {
 
         rushManager.endRush(endInstant).join();
 
-        // Attendu: Plat1 = +1 ELO, Plat2 = -1 ELO
         assertEquals(51, prof1.getElo());
         assertEquals(49, prof2.getElo());
     }
@@ -244,7 +231,6 @@ public class RushManagerTest {
         int duration = rushManager.getDurationMinutes();
         Instant endInstant = startInstant.plusSeconds(duration * 60);
 
-        // 2 Platine, 1 Or (35), 1 Fer (5)
         UUID plat1 = UUID.randomUUID();
         UUID plat2 = UUID.randomUUID();
         UUID or1 = UUID.randomUUID();
@@ -268,28 +254,18 @@ public class RushManagerTest {
         rushManager.registerPlayer(fer1, startInstant);
 
         String res = rushManager.getDailyResource();
-        // Pour les Platines (Intra-Rang):
         rushManager.handleResourceGain(plat1, res, 100, startInstant.plusSeconds(5));
         rushManager.handleResourceGain(plat2, res, 80, startInstant.plusSeconds(5));
-        // Pour les Orphelins (Transversale): Or = 500, Fer = 100
         rushManager.handleResourceGain(or1, res, 500, startInstant.plusSeconds(5));
         rushManager.handleResourceGain(fer1, res, 100, startInstant.plusSeconds(5));
 
         rushManager.endRush(endInstant).join();
 
-        // Les Platines s'évaluent entre eux
-        // Plat1: S=100, Plat2: S=80. Smax=100. R1=1.0, R2=0.8. Moyenne R = 0.9. D1=0.1, D2=-0.1
-        // Platine elo-factor = 15.0. 15.0 * 0.1 = +1.5 -> +2. -1.5 -> -2.
         assertEquals(52, profPlat1.getElo());
         assertEquals(48, profPlat2.getElo());
 
-        // Or et Fer s'évaluent de manière transversale.
-        // Or: S=500, Fer: S=100. Smax=500. R_or=1.0, R_fer=0.2. Moyenne R = 0.6. D_or=0.4, D_fer=-0.4
-        // ELO raw = 30.0 * D.
-        // Or ELO raw = 30.0 * 0.4 = +12. Gain mult Or = 0.75. Or ELO gain = round(12 * 0.75) = +9.
-        // Fer ELO raw = 30.0 * -0.4 = -12. Loss mult Fer = 0.5. Fer ELO loss = round(-12 * 0.5) = -6.
-        assertEquals(59, profOr.getElo()); // 50 + 9 = 59
-        assertEquals(44, profFer.getElo()); // 50 - 6 = 44
+        assertEquals(59, profOr.getElo());
+        assertEquals(44, profFer.getElo());
     }
 
     @Test
@@ -305,7 +281,6 @@ public class RushManagerTest {
         UUID p1 = UUID.randomUUID();
         UUID p2 = UUID.randomUUID();
 
-        // Joueur Argent (niveau 25) avec 5 ELO
         PlayerProfile prof1 = new PlayerProfile(p1, "Argent1", 25, 5, startInstant, new HashMap<>());
         PlayerProfile prof2 = new PlayerProfile(p2, "Argent2", 25, 80, startInstant, new HashMap<>());
 
@@ -319,13 +294,12 @@ public class RushManagerTest {
 
         String res = rushManager.getDailyResource();
         rushManager.handleResourceGain(p1, res, 50, startInstant.plusSeconds(5));
-        rushManager.handleResourceGain(p2, res, 500, startInstant.plusSeconds(5)); // prof2 a un score bcp plus haut, prof1 va perdre de l'ELO
+        rushManager.handleResourceGain(p2, res, 500, startInstant.plusSeconds(5));
 
         rushManager.endRush(endInstant).join();
 
-        // prof1 doit perdre plus de 5 ELO mais est bloqué à 0 ELO pour son niveau Argent (pas de rétrogradation)
         assertEquals(0, prof1.getElo());
-        assertEquals(25, prof1.getRankLevel()); // Conserve son niveau 25
+        assertEquals(25, prof1.getRankLevel());
     }
 
     @Test
@@ -340,7 +314,6 @@ public class RushManagerTest {
 
         String res = rushManager.getDailyResource();
 
-        // 1. Ties (Égalités)
         UUID p1 = UUID.randomUUID();
         UUID p2 = UUID.randomUUID();
         PlayerProfile prof1 = new PlayerProfile(p1, "Player1", 15, 50, startInstant, new HashMap<>());
@@ -360,17 +333,14 @@ public class RushManagerTest {
         assertEquals(50, prof1.getElo());
         assertEquals(50, prof2.getElo());
 
-        // 2. Score Max Nul
         prof1.setElo(50); prof2.setElo(50);
         rushManager.setupDaily(time0800);
         rushManager.registerPlayer(p1, startInstant);
         rushManager.registerPlayer(p2, startInstant);
-        // Aucun gain de ressource (score max = 0)
         rushManager.endRush(endInstant).join();
         assertEquals(50, prof1.getElo());
         assertEquals(50, prof2.getElo());
 
-        // 3. Joueur unique
         UUID soloUuid = UUID.randomUUID();
         PlayerProfile soloProf = new PlayerProfile(soloUuid, "Solo", 15, 50, startInstant, new HashMap<>());
         cache.clear();
@@ -379,7 +349,7 @@ public class RushManagerTest {
         rushManager.registerPlayer(soloUuid, startInstant);
         rushManager.handleResourceGain(soloUuid, res, 500, startInstant.plusSeconds(5));
         rushManager.endRush(endInstant).join();
-        assertEquals(50, soloProf.getElo()); // Variation ELO = 0
+        assertEquals(50, soloProf.getElo());
     }
 
     @Test
@@ -396,21 +366,14 @@ public class RushManagerTest {
         cache.put(p1, prof1);
         rushManager.setProfileCacheOverride(cache);
 
-        // Inscription
         rushManager.registerPlayer(p1, startInstant);
 
-        // Gain initial
         String res = rushManager.getDailyResource();
         rushManager.handleResourceGain(p1, res, 150, startInstant.plusSeconds(5));
         assertEquals(150.0, rushManager.getPlayerScore(p1));
-
-        // Déconnexion (retiré du cache)
         cache.remove(p1);
 
-        // Reconnexion (remis dans le cache)
         cache.put(p1, prof1);
-
-        // Vérification que le score est préservé et qu'il reprend à 150
         assertEquals(150.0, rushManager.getPlayerScore(p1));
         rushManager.handleResourceGain(p1, res, 50, startInstant.plusSeconds(10));
         assertEquals(200.0, rushManager.getPlayerScore(p1));
@@ -426,18 +389,15 @@ public class RushManagerTest {
         int duration = rushManager.getDurationMinutes();
         Instant endInstant = startInstant.plusSeconds(duration * 60);
 
-        UUID p1 = UUID.randomUUID(); // Joueur en ligne (Fer)
-        UUID p2 = UUID.randomUUID(); // Joueur déconnecté à la fin (Fer)
+        UUID p1 = UUID.randomUUID();
+        UUID p2 = UUID.randomUUID();
 
         PlayerProfile prof1 = new PlayerProfile(p1, "Online", 5, 50, startInstant, new HashMap<>());
         PlayerProfile prof2 = new PlayerProfile(p2, "Offline", 5, 50, startInstant, new HashMap<>());
-
-        // Persist the offline profile in our database so the manager can load it
         dbManager.saveProfile(prof2).get();
 
         Map<UUID, PlayerProfile> cache = new HashMap<>();
         cache.put(p1, prof1);
-        // prof2 n'est PAS dans le cache (il est hors-ligne)
         rushManager.setProfileCacheOverride(cache);
 
         rushManager.registerPlayer(p1, startInstant);
@@ -445,30 +405,20 @@ public class RushManagerTest {
 
         String res = rushManager.getDailyResource();
         rushManager.handleResourceGain(p1, res, 100, startInstant.plusSeconds(5));
-        rushManager.handleResourceGain(p2, res, 900, startInstant.plusSeconds(5)); // score plus élevé
+        rushManager.handleResourceGain(p2, res, 900, startInstant.plusSeconds(5));
 
-        // Fin du Rush
         rushManager.endRush(endInstant).join();
-
-        // Reload prof2 from DB to see if ELO was updated (50 + 22 = 72)
         PlayerProfile updatedProf2 = dbManager.loadProfile(p2, "Offline").get();
         assertEquals(72, updatedProf2.getElo());
-        
-        // prof2 doit avoir un message récapitulatif dans son quotaProgress
         assertTrue(updatedProf2.getQuotaProgress().containsKey("rush_pending_summary"));
         assertEquals("+22 ELO", updatedProf2.getQuotaProgress().get("rush_pending_summary"));
 
-        // Simuler la reconnexion de prof2
         cache.put(p2, updatedProf2);
-        
-        // Appeler la vérification de bilan au retour
         StringBuilder messageSent = new StringBuilder();
         rushManager.checkOfflineSummary(updatedProf2, (msg) -> messageSent.append(msg)).join();
 
-        // Message de recap doit être envoyé au joueur
         String text = messageSent.toString();
         assertTrue(text.contains("gagné") && text.contains("+22 ELO"));
-        // La clé doit être nettoyée du profil
         assertFalse(updatedProf2.getQuotaProgress().containsKey("rush_pending_summary"));
     }
 
@@ -490,11 +440,9 @@ public class RushManagerTest {
 
         String res = rushManager.getDailyResource();
 
-        // Gain normal (hors commande)
         rushManager.handleResourceGain(p1, res, 100, startInstant.plusSeconds(5));
         assertEquals(100.0, rushManager.getPlayerScore(p1));
 
-        // Simuler un gain via commande administrative
         class AdminCommandSimulator {
             void run() {
                 rushManager.handleResourceGain(p1, res, 50, startInstant.plusSeconds(10));
@@ -503,7 +451,6 @@ public class RushManagerTest {
         
         new AdminCommandSimulator().run();
 
-        // Le score doit être inchangé (toujours 100.0), car l'appelant contient "Command" dans sa stack trace
         assertEquals(100.0, rushManager.getPlayerScore(p1));
     }
 }

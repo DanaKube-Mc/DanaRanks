@@ -3,6 +3,7 @@ package app.danakube.danaranks.quota;
 import app.danakube.danaranks.DanaRanks;
 import app.danakube.danaranks.profile.PlayerProfile;
 
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import java.time.Instant;
@@ -48,7 +49,6 @@ public class QuotaManager {
     }
 
     public QuotaManager() {
-        // Constructeur par défaut avec des objectifs par défaut
         baseObjectives.put("lumens_gained", new BaseObjective("lumens_gained", 1000, 5, 10, 0));
         baseObjectives.put("job_xp", new BaseObjective("job_xp", 500, 5, 10, 0));
     }
@@ -58,7 +58,6 @@ public class QuotaManager {
             return;
         }
 
-        // Hour
         int hr = config.getInt("reset.hour", 4);
         if (hr < 0 || hr > 23) {
             if (logger != null) {
@@ -69,7 +68,6 @@ public class QuotaManager {
             this.resetHour = hr;
         }
 
-        // Reference Date
         String refDate = config.getString("reset.reference-date", "2026-07-03");
         try {
             LocalDate.parse(refDate);
@@ -81,7 +79,6 @@ public class QuotaManager {
             this.refDateStr = "2026-07-03";
         }
 
-        // Surplus Multiplier
         double mult = config.getDouble("quotas-settings.surplus-multiplier", 10.0);
         if (mult < 1.0) {
             if (logger != null) {
@@ -92,7 +89,6 @@ public class QuotaManager {
             this.surplusMultiplier = mult;
         }
 
-        // Scaling multiplier
         double scaleMult = config.getDouble("quotas-settings.scaling.multiplier-per-rank", 1.15);
         if (scaleMult < 1.0) {
             if (logger != null) {
@@ -103,10 +99,9 @@ public class QuotaManager {
             this.scalingMultiplierPerRank = scaleMult;
         }
 
-        // Objectives
         if (config.contains("quotas-settings.base-rank-1.objectives")) {
             baseObjectives.clear();
-            org.bukkit.configuration.ConfigurationSection section = config.getConfigurationSection("quotas-settings.base-rank-1.objectives");
+            ConfigurationSection section = config.getConfigurationSection("quotas-settings.base-rank-1.objectives");
             if (section != null) {
                 for (String key : section.getKeys(false)) {
                     String path = "quotas-settings.base-rank-1.objectives." + key;
@@ -363,7 +358,6 @@ public class QuotaManager {
         int level = getLevelFromRank(profile.getRankLevel());
         int missedCycles = getMissedCycles(level, profile.getLastReset(), now);
         if (missedCycles <= 0) {
-            // Si le quota n'a pas encore été initialisé (quotaProgress vide), on l'initialise
             if (profile.getQuotaProgress().isEmpty()) {
                 resetQuotaProgress(profile, profile.getRankLevel());
             }

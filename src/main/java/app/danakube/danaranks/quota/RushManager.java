@@ -50,7 +50,6 @@ public class RushManager {
         return plugin != null ? plugin.getDatabaseManager() : null;
     }
 
-    // Configuration keys
     private int dailySetupHour = 8;
     private int minStartHour = 12;
     private int maxStartHour = 22;
@@ -60,10 +59,8 @@ public class RushManager {
     private List<String> eligibleResources = new ArrayList<>();
     private String discordWebhookUrl = "";
 
-    // ELO Config mappings
     private final Map<String, RankSetting> rankSettings = new HashMap<>();
 
-    // State parameters
     private boolean dailyPlanned = false;
     private LocalDate lastPlannedDate = null;
     private String dailyResource = null;
@@ -73,7 +70,6 @@ public class RushManager {
     private boolean rushActive = false;
     private boolean discordAnnounced = false;
 
-    // Player states: scores are kept in memory to preserve them across disconnects
     private final Map<UUID, Double> registeredScores = new ConcurrentHashMap<>();
 
     public static class RankSetting {
@@ -104,7 +100,6 @@ public class RushManager {
         this.eligibleResources = config.getStringList("rush.eligible-resources");
         this.discordWebhookUrl = config.getString("rush.discord-webhook-url", "");
 
-        // Load rank parameters
         String[] levels = {"fer", "bronze", "argent", "or", "platine"};
         for (String level : levels) {
             double factor = config.getDouble("rush.rank-settings." + level + ".elo-factor", 30.0);
@@ -122,7 +117,6 @@ public class RushManager {
             LocalDateTime now = LocalDateTime.now();
             Instant nowInstant = now.atZone(ZoneId.systemDefault()).toInstant();
 
-            // Planning daily draw at 08h00
             if (now.getHour() == dailySetupHour && now.getMinute() == 0 && now.getSecond() == 0) {
                 if (lastPlannedDate == null || !lastPlannedDate.equals(now.toLocalDate())) {
                     setupDaily(now);
@@ -130,7 +124,7 @@ public class RushManager {
             }
 
             tickRush(nowInstant);
-        }, 20L, 20L); // Check every second
+        }, 20L, 20L);
     }
 
     public void setupDaily(LocalDateTime now) {
@@ -142,7 +136,6 @@ public class RushManager {
         Random rand = new Random();
         this.dailyResource = eligibleResources.get(rand.nextInt(eligibleResources.size()));
 
-        // Start hour between minStartHour and maxStartHour (inclusive/exclusive)
         int hour = minStartHour + rand.nextInt(Math.max(1, maxStartHour - minStartHour + 1));
         int minute = rand.nextInt(60);
         this.startTime = now.withHour(hour).withMinute(minute).withSecond(0).withNano(0);
@@ -159,7 +152,6 @@ public class RushManager {
         logger.info("[Rush] Daily Rush setup completed. Resource: " + dailyResource + 
                 ", Start: " + startTime + ", Duration: " + durationMinutes + "m.");
 
-        // Announce immediately in-game and send discord hook
         announceRegistration();
     }
 
@@ -179,7 +171,6 @@ public class RushManager {
         Instant startInstant = startTime.atZone(ZoneId.systemDefault()).toInstant();
         Instant endInstant = startInstant.plusSeconds(durationMinutes * 60L);
 
-        // Reject if Rush is already finished
         if (now.isAfter(endInstant)) {
             return false;
         }
@@ -233,7 +224,6 @@ public class RushManager {
 
     public void handleResourceGain(UUID uuid, String resource, double amount, Instant now) {
         if (!dailyPlanned || dailyResource == null) return;
-        // Normalize resource names (replace - with _ to match trackers)
         String normalizedResource = resource.replace("-", "_");
         String normalizedDaily = dailyResource.replace("-", "_");
 
@@ -241,7 +231,6 @@ public class RushManager {
         if (!isRushActive(now)) return;
         if (!registeredScores.containsKey(uuid)) return;
 
-        // Anti-cheat check
         if (isTriggeredByAdminCommand()) {
             logger.warning("[Rush] Blocked administrative resource gain for " + uuid);
             return;
@@ -249,7 +238,6 @@ public class RushManager {
 
         registeredScores.computeIfPresent(uuid, (key, current) -> current + amount);
 
-        // Live visual update if player is online
         if (plugin != null) {
             Player player = Bukkit.getPlayer(uuid);
             if (player != null) {
@@ -300,7 +288,6 @@ public class RushManager {
             return;
         }
 
-        // Active Rush
         if (!now.isBefore(startInstant) && now.isBefore(endInstant)) {
             if (!rushActive) {
                 rushActive = true;
@@ -308,7 +295,6 @@ public class RushManager {
                 sendDiscordWebhook("[Rush] Le Rush quotidien sur la ressource " + dailyResource + " vient de démarrer pour " + durationMinutes + " minutes !");
             }
 
-            // Update active boss bars for online players
             long totalSecs = durationMinutes * 60L;
             long elapsedSecs = now.getEpochSecond() - startInstant.getEpochSecond();
             long remainingSecs = totalSecs - elapsedSecs;
@@ -321,7 +307,6 @@ public class RushManager {
                 }
             }
         }
-        // Pre-Announce Window
         else if (!now.isBefore(preAnnounceInstant) && now.isBefore(startInstant)) {
             long remainingSecs = startInstant.getEpochSecond() - now.getEpochSecond();
             visualManager.showAnnounceBar(formatTime(remainingSecs), dailyResource);
@@ -342,7 +327,6 @@ public class RushManager {
         visualManager.hideAnnounceBar();
         visualManager.clearAllActiveBars();
 
-        // 1. Filter players with score > 0
         Map<UUID, Double> activeParticipants = new HashMap<>();
         for (Map.Entry<UUID, Double> entry : registeredScores.entrySet()) {
             if (entry.getValue() > 0.0) {
@@ -356,8 +340,6 @@ public class RushManager {
             return CompletableFuture.completedFuture(null);
         }
 
-        // We need to resolve all profiles (both online from cache and offline from DB)
-        // Group players by rank tier
         Map<String, List<PlayerProfile>> tiers = new HashMap<>();
         tiers.put("fer", new ArrayList<>());
         tiers.put("bronze", new ArrayList<>());
@@ -376,7 +358,6 @@ public class RushManager {
             if (profile != null) {
                 resolvedProfiles.add(profile);
             } else if (getDatabaseManager() != null) {
-                // Load offline profile
                 final UUID finalUuid = uuid;
                 CompletableFuture<Void> fut = getDatabaseManager().loadProfile(uuid, "OfflinePlayer")
                         .thenAccept(offlineProfile -> {
@@ -400,7 +381,6 @@ public class RushManager {
         tiers.put("or", new ArrayList<>());
         tiers.put("platine", new ArrayList<>());
 
-        // Phase 1: Group by Level
         for (PlayerProfile profile : profiles) {
             String tierName = getTierName(profile.getRankLevel());
             tiers.get(tierName).add(profile);
@@ -410,7 +390,6 @@ public class RushManager {
         Map<UUID, Integer> eloChanges = new HashMap<>();
         List<CompletableFuture<Void>> dbFutures = new ArrayList<>();
 
-        // Phase 2: Intra-Rank Evaluation
         for (Map.Entry<String, List<PlayerProfile>> entry : tiers.entrySet()) {
             String tier = entry.getKey();
             List<PlayerProfile> tierPlayers = entry.getValue();
@@ -418,7 +397,6 @@ public class RushManager {
             double eloFactor = settings != null ? settings.eloFactor : 30.0;
 
             if (tierPlayers.size() >= 2) {
-                // Calculate max score
                 double maxScore = 0;
                 for (PlayerProfile p : tierPlayers) {
                     double s = scores.getOrDefault(p.getUuid(), 0.0);
@@ -452,7 +430,6 @@ public class RushManager {
             }
         }
 
-        // Phase 3: Cross-Rank Evaluation (Orphans)
         if (orphans.size() >= 2) {
             double maxScore = 0;
             for (PlayerProfile p : orphans) {
@@ -497,7 +474,6 @@ public class RushManager {
             eloChanges.put(orphans.getFirst().getUuid(), 0);
         }
 
-        // Phase 4: Apply and Persist
         for (PlayerProfile profile : profiles) {
             int change = eloChanges.getOrDefault(profile.getUuid(), 0);
             profile.addElo(change);
@@ -505,12 +481,10 @@ public class RushManager {
             String textSign = change >= 0 ? "+" : "";
             String summaryMsg = textSign + change + " ELO";
 
-            // Save history & profile in DB
             if (getDatabaseManager() != null) {
                 DatabaseManager db = getDatabaseManager();
                 dbFutures.add(db.logHistory(profile.getUuid(), "RUSH", change, profile.getElo(), "Rush Event - Resource: " + dailyResource));
-                
-                // If player is offline (not in cache), flag profile for offline notification
+
                 boolean isOnline = getProfileCache().containsKey(profile.getUuid());
                 if (!isOnline) {
                     profile.getQuotaProgress().put("rush_pending_summary", summaryMsg);
@@ -519,7 +493,6 @@ public class RushManager {
                 dbFutures.add(db.saveProfile(profile));
             }
 
-            // Online notification immediately
             if (Bukkit.getServer() != null) {
                 try {
                     Player onlinePlayer = Bukkit.getPlayer(profile.getUuid());
@@ -550,15 +523,13 @@ public class RushManager {
     public CompletableFuture<Void> checkOfflineSummary(PlayerProfile profile, Consumer<String> messageSender) {
         if (profile.getQuotaProgress().containsKey("rush_pending_summary")) {
             String summary = (String) profile.getQuotaProgress().remove("rush_pending_summary");
-            
-            // Send recap message
+
             boolean isWin = !summary.startsWith("-");
             String colorTag = isWin ? "<green>" : "<red>";
             String actionWord = isWin ? "gagné" : "perdu";
             
             messageSender.accept("<blue>[Rush] L'événement s'est terminé ! Vous avez " + actionWord + " " + colorTag + summary + "</color> !");
 
-            // Save updated profile
             if (getDatabaseManager() != null) {
                 return getDatabaseManager().saveProfile(profile);
             }

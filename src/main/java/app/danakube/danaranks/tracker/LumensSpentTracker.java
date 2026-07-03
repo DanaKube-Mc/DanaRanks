@@ -21,7 +21,6 @@ public class LumensSpentTracker implements ResourceTracker {
         if (player == null) return;
 
         double amount = event.getAmount();
-        // Ne conserve que les dépenses (amount < 0)
         if (amount >= 0) return;
 
         String reason = event.getReason();

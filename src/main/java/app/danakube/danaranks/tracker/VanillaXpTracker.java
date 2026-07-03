@@ -10,7 +10,7 @@ import org.bukkit.event.player.PlayerExpChangeEvent;
 import org.bukkit.event.player.PlayerLevelChangeEvent;
 
 public class VanillaXpTracker implements ResourceTracker {
-    private final String mode; // "gained" ou "spent"
+    private final String mode;
 
     public VanillaXpTracker(String mode) {
         this.mode = mode.toLowerCase();
@@ -56,7 +56,6 @@ public class VanillaXpTracker implements ResourceTracker {
         int oldLevel = event.getOldLevel();
         int newLevel = event.getNewLevel();
 
-        // On ne s'intéresse qu'aux pertes de niveaux (dépenses)
         if (newLevel >= oldLevel) return;
 
         double xpSpent = getXpDifference(oldLevel, newLevel);
