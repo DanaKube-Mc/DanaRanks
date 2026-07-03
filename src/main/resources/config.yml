@@ -16,3 +16,32 @@ database:
 luckperms:
   # Nom de la piste (track) de promotion configurée dans LuckPerms
   track-name: "danaranks"
+
+# Configuration des resets globaux
+reset:
+  # Heure du reset (de 0 à 23)
+  hour: 4
+  # Date de référence globale pour le calcul des périodes (Format YYYY-MM-DD)
+  # Le reset de chaque niveau sera calculé par rapport à cette date.
+  reference-date: "2026-07-03"
+
+# Paramètres généraux des quotas
+quotas-settings:
+  # Multiplicateur pour atteindre le surplus maximum ELO (ex: 10.0 pour un surplus max à 10x la cible)
+  surplus-multiplier: 10.0
+  # Paramètres de croissance par défaut (formule de scaling)
+  scaling:
+    multiplier-per-rank: 1.15 # +15% de quantité par rang
+  # Quota de base pour le Rang 1 (Fer I, Période = 1 jour, pas de pénalité donc fail-penalty = 0)
+  base-rank-1:
+    objectives:
+      lumens-gained:
+        target: 1000
+        base-elo: 5
+        max-surplus-elo: 10
+        fail-penalty: 0
+      job-xp:
+        target: 500
+        base-elo: 5
+        max-surplus-elo: 10
+        fail-penalty: 0

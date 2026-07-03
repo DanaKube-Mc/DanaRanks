@@ -12,6 +12,8 @@ public final class DanaRanks extends JavaPlugin {
     private DatabaseManager databaseManager;
     private LuckPermsHook luckPermsHook;
     private MessageManager messageManager;
+    private QuotaManager quotaManager;
+    private TrackerRegistry trackerRegistry;
     private final Map<UUID, PlayerProfile> profileCache = new ConcurrentHashMap<>();
 
     public static DanaRanks getInstance() {
@@ -30,6 +32,19 @@ public final class DanaRanks extends JavaPlugin {
         FileConfiguration config = getConfig();
 
         messageManager = new MessageManager(this);
+
+        // Initialize QuotaManager and TrackerRegistry
+        quotaManager = new QuotaManager();
+        quotaManager.loadConfig(config, getLogger());
+        QuotaManager.setInstance(quotaManager);
+
+        trackerRegistry = new TrackerRegistry(this);
+        trackerRegistry.registerTracker(new LumensGainedTracker());
+        trackerRegistry.registerTracker(new LumensSpentTracker());
+        trackerRegistry.registerTracker(new JobXpTracker());
+        trackerRegistry.registerTracker(new ToolXpTracker());
+        trackerRegistry.registerTracker(new VanillaXpTracker("gained"));
+        trackerRegistry.registerTracker(new VanillaXpTracker("spent"));
 
         String dbType = config.getString("database.type", "SQLITE");
         if (dbType.equalsIgnoreCase("MYSQL")) {
@@ -72,6 +87,9 @@ public final class DanaRanks extends JavaPlugin {
             databaseManager.close();
         }
         profileCache.clear();
+        QuotaManager.setInstance(null);
+        quotaManager = null;
+        trackerRegistry = null;
         instance = null;
         if (messageManager != null) {
             getLogger().info(messageManager.getMessage("plugin-disabled", "DanaRanks has been disabled!"));
@@ -98,5 +116,13 @@ public final class DanaRanks extends JavaPlugin {
 
     public Map<UUID, PlayerProfile> getProfileCache() {
         return profileCache;
+    }
+
+    public QuotaManager getQuotaManager() {
+        return quotaManager;
+    }
+
+    public TrackerRegistry getTrackerRegistry() {
+        return trackerRegistry;
     }
 }

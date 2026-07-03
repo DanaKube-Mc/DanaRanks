@@ -79,6 +79,16 @@ public class PlayerProfile {
     }
 
     public synchronized int addElo(int amount) {
+        if (this.rankLevel >= 50) {
+            int newElo = this.elo + amount;
+            if (newElo < 0) {
+                this.elo = 0;
+            } else {
+                this.elo = newElo;
+            }
+            return 0;
+        }
+
         int totalElo = this.elo + amount;
         if (totalElo < 0) {
             this.elo = 0;
@@ -86,13 +96,20 @@ public class PlayerProfile {
         }
 
         int ranksGained = totalElo / 100;
-        this.elo = totalElo % 100;
+        int remainingElo = totalElo % 100;
 
         if (ranksGained > 0) {
             int oldRank = this.rankLevel;
             this.rankLevel = Math.min(50, this.rankLevel + ranksGained);
             int actualRanksGained = this.rankLevel - oldRank;
             
+            if (this.rankLevel == 50) {
+                int cumulativeElo = (oldRank - 1) * 100 + this.elo + amount;
+                this.elo = cumulativeElo - 4900;
+            } else {
+                this.elo = remainingElo;
+            }
+
             if (actualRanksGained > 0) {
                 if (promotionCallback != null) {
                     try {
@@ -102,7 +119,10 @@ public class PlayerProfile {
                     }
                 }
             }
+            return actualRanksGained;
+        } else {
+            this.elo = remainingElo;
+            return 0;
         }
-        return ranksGained;
     }
 }

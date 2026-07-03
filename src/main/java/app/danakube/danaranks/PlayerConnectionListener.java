@@ -8,6 +8,7 @@ import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
 
@@ -26,6 +27,10 @@ public class PlayerConnectionListener implements Listener {
         try {
             PlayerProfile profile = plugin.getDatabaseManager().loadProfile(uuid, name).join();
             if (profile != null) {
+                QuotaManager qm = QuotaManager.getInstance();
+                if (qm != null) {
+                    qm.handleOfflineCatchUp(profile, Instant.now());
+                }
                 plugin.getProfileCache().put(uuid, profile);
             }
         } catch (CompletionException | NullPointerException e) {
