@@ -45,3 +45,71 @@ quotas-settings:
         base-elo: 5
         max-surplus-elo: 10
         fail-penalty: 0
+
+# Configuration du Rush Quotidien
+rush:
+  # Heure de la planification journalière (tirage au sort de la ressource et des horaires)
+  daily-setup-hour: 8
+  
+  # Plage horaire dans laquelle le Rush peut démarrer (Heures de 0 à 23)
+  start-window:
+    min-hour: 12
+    max-hour: 22
+
+  # Plage de durée de l'événement (en minutes)
+  duration-range:
+    min-minutes: 20
+    max-minutes: 60
+
+  # Temps de pré-annonce avant le lancement (en minutes)
+  pre-announce-minutes: 30
+
+  # URL du webhook Discord pour les annonces de Rush
+  discord-webhook-url: ""
+
+  # Liste des ressources éligibles pour le tirage au sort quotidien
+  eligible-resources:
+    - "lumens-gained"
+    - "lumens-spent"
+    - "job-xp"
+    - "tool-xp"
+    - "vanilla-xp-gained"
+    - "vanilla-xp-spent"
+
+  # Configuration visuelle des Boss Bars (Adventure)
+  # Couleurs valides : PINK, BLUE, RED, GREEN, YELLOW, PURPLE, WHITE
+  # Styles valides : PROGRESS, NOTCHED_6, NOTCHED_10, NOTCHED_12, NOTCHED_20
+  bossbar:
+    announce:
+      color: "BLUE"
+      style: "PROGRESS"
+      title: "<blue>[Rush] Début du Rush dans %time% (Ressource: %resource%) - Tapez /rush join !"
+    active:
+      color: "RED"
+      style: "PROGRESS"
+      title: "<red>[Rush] Temps restant : %time% - Votre Score : <gold>%score%</gold>"
+
+  # Paramètres ELO par groupe de niveau
+  rank-settings:
+    fer:
+      # Facteur de base ELO pour la redistribution intra-rang (si taille >= 2)
+      elo-factor: 50.0
+      # Multiplicateurs si évaluation transversale (si taille < 2)
+      gain-multiplier: 1.5
+      loss-multiplier: 0.5
+    bronze:
+      elo-factor: 40.0
+      gain-multiplier: 1.25
+      loss-multiplier: 0.75
+    argent:
+      elo-factor: 30.0
+      gain-multiplier: 1.0
+      loss-multiplier: 1.0
+    or:
+      elo-factor: 20.0
+      gain-multiplier: 0.75
+      loss-multiplier: 1.25
+    platine:
+      elo-factor: 15.0
+      gain-multiplier: 0.5
+      loss-multiplier: 1.5
