@@ -1,14 +1,16 @@
 package app.danakube.danaranks.tracker;
 
-import app.danakube.danaranks.DanaRanks;
-import app.danakube.danaranks.profile.PlayerProfile;
-import app.danakube.danaranks.quota.QuotaManager;
-
+import app.danakube.danaranks.core.DanaRanks;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import su.nightexpress.excellentjobs.api.events.ExcellentJobXPCheckEvent;
 
 public class JobXpTracker implements ResourceTracker {
+    private final DanaRanks plugin;
+
+    public JobXpTracker(DanaRanks plugin) {
+        this.plugin = plugin;
+    }
 
     @Override
     public String getResourceName() {
@@ -23,18 +25,11 @@ public class JobXpTracker implements ResourceTracker {
         double amount = event.getAmount();
         if (amount <= 0) return;
 
-        DanaRanks plugin = DanaRanks.getInstance();
-        if (plugin != null) {
-            PlayerProfile profile = plugin.getProfileCache().get(player.getUniqueId());
-            if (profile != null) {
-                QuotaManager qm = QuotaManager.getInstance();
-                if (qm != null) {
-                    qm.incrementProgress(profile, getResourceName(), amount);
-                }
-                if (plugin.getRushManager() != null) {
-                    plugin.getRushManager().handleResourceGain(player.getUniqueId(), getResourceName(), amount, java.time.Instant.now());
-                }
+        plugin.getProfileCache().getProfile(player.getUniqueId()).ifPresent(profile -> {
+            plugin.getQuotaService().getProgressTracker().incrementProgress(profile, plugin.getQuotaService().getQuotaConfig(), getResourceName(), amount);
+            if (plugin.getRushManager() != null) {
+                plugin.getRushManager().handleResourceGain(player.getUniqueId(), getResourceName(), amount, java.time.Instant.now());
             }
-        }
+        });
     }
 }

@@ -1,18 +1,17 @@
 package app.danakube.danaranks.tracker;
 
-import app.danakube.danaranks.DanaRanks;
-import app.danakube.danaranks.profile.PlayerProfile;
-import app.danakube.danaranks.quota.QuotaManager;
-
+import app.danakube.danaranks.core.DanaRanks;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.player.PlayerExpChangeEvent;
 import org.bukkit.event.player.PlayerLevelChangeEvent;
 
 public class VanillaXpTracker implements ResourceTracker {
+    private final DanaRanks plugin;
     private final String mode;
 
-    public VanillaXpTracker(String mode) {
+    public VanillaXpTracker(DanaRanks plugin, String mode) {
+        this.plugin = plugin;
         this.mode = mode.toLowerCase();
     }
 
@@ -31,19 +30,12 @@ public class VanillaXpTracker implements ResourceTracker {
         double amount = event.getAmount();
         if (amount <= 0) return;
 
-        DanaRanks plugin = DanaRanks.getInstance();
-        if (plugin != null) {
-            PlayerProfile profile = plugin.getProfileCache().get(player.getUniqueId());
-            if (profile != null) {
-                QuotaManager qm = QuotaManager.getInstance();
-                if (qm != null) {
-                    qm.incrementProgress(profile, getResourceName(), amount);
-                }
-                if (plugin.getRushManager() != null) {
-                    plugin.getRushManager().handleResourceGain(player.getUniqueId(), getResourceName(), amount, java.time.Instant.now());
-                }
+        plugin.getProfileCache().getProfile(player.getUniqueId()).ifPresent(profile -> {
+            plugin.getQuotaService().getProgressTracker().incrementProgress(profile, plugin.getQuotaService().getQuotaConfig(), getResourceName(), amount);
+            if (plugin.getRushManager() != null) {
+                plugin.getRushManager().handleResourceGain(player.getUniqueId(), getResourceName(), amount, java.time.Instant.now());
             }
-        }
+        });
     }
 
     @EventHandler
@@ -61,19 +53,12 @@ public class VanillaXpTracker implements ResourceTracker {
         double xpSpent = getXpDifference(oldLevel, newLevel);
         if (xpSpent <= 0) return;
 
-        DanaRanks plugin = DanaRanks.getInstance();
-        if (plugin != null) {
-            PlayerProfile profile = plugin.getProfileCache().get(player.getUniqueId());
-            if (profile != null) {
-                QuotaManager qm = QuotaManager.getInstance();
-                if (qm != null) {
-                    qm.incrementProgress(profile, getResourceName(), xpSpent);
-                }
-                if (plugin.getRushManager() != null) {
-                    plugin.getRushManager().handleResourceGain(player.getUniqueId(), getResourceName(), xpSpent, java.time.Instant.now());
-                }
+        plugin.getProfileCache().getProfile(player.getUniqueId()).ifPresent(profile -> {
+            plugin.getQuotaService().getProgressTracker().incrementProgress(profile, plugin.getQuotaService().getQuotaConfig(), getResourceName(), xpSpent);
+            if (plugin.getRushManager() != null) {
+                plugin.getRushManager().handleResourceGain(player.getUniqueId(), getResourceName(), xpSpent, java.time.Instant.now());
             }
-        }
+        });
     }
 
     private double getXpDifference(int fromLevel, int toLevel) {

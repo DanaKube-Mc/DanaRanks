@@ -1,19 +1,13 @@
 package app.danakube.danaranks.database;
 
-import app.danakube.danaranks.profile.PlayerProfile;
-import app.danakube.danaranks.profile.HistoryEntry;
-
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
 import java.io.File;
-import java.lang.reflect.Type;
-import java.sql.*;
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -65,8 +59,20 @@ public class DatabaseManager {
         createTables();
     }
 
-    private Connection getConnection() throws SQLException {
+    public Connection getConnection() throws SQLException {
         return dataSource.getConnection();
+    }
+
+    public String getTablePrefix() {
+        return tablePrefix;
+    }
+
+    public Gson getGson() {
+        return gson;
+    }
+
+    public ExecutorService getExecutor() {
+        return executor;
     }
 
     public void close() {
@@ -104,97 +110,5 @@ public class DatabaseManager {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-    }
-
-    public CompletableFuture<PlayerProfile> loadProfile(UUID uuid, String name) {
-        return CompletableFuture.supplyAsync(() -> {
-            String query = "SELECT * FROM " + tablePrefix + "profiles WHERE uuid = ?";
-            try (Connection conn = getConnection();
-                 PreparedStatement ps = conn.prepareStatement(query)) {
-                ps.setString(1, uuid.toString());
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) {
-                        int rank = rs.getInt("rank_level");
-                        int elo = rs.getInt("elo");
-                        Timestamp ts = rs.getTimestamp("last_reset");
-                        Instant lastReset = ts != null ? ts.toInstant() : Instant.now();
-                        String quotaJson = rs.getString("quota_progress");
-                        
-                        Map<String, Object> quotaProgress = new HashMap<>();
-                        if (quotaJson != null && !quotaJson.isEmpty()) {
-                            Type type = new TypeToken<Map<String, Object>>(){}.getType();
-                            quotaProgress = gson.fromJson(quotaJson, type);
-                        }
-                        return new PlayerProfile(uuid, name, rank, elo, lastReset, quotaProgress);
-                    }
-                }
-            } catch (SQLException e) {
-                throw new RuntimeException("Error loading profile", e);
-            }
-            return new PlayerProfile(uuid, name);
-        }, executor);
-    }
-
-    public CompletableFuture<Void> saveProfile(PlayerProfile profile) {
-        return CompletableFuture.runAsync(() -> {
-            String replaceQuery = "REPLACE INTO " + tablePrefix + "profiles (uuid, player_name, rank_level, elo, last_reset, quota_progress) VALUES (?, ?, ?, ?, ?, ?)";
-            try (Connection conn = getConnection();
-                 PreparedStatement ps = conn.prepareStatement(replaceQuery)) {
-                ps.setString(1, profile.getUuid().toString());
-                ps.setString(2, profile.getPlayerName());
-                ps.setInt(3, profile.getRankLevel());
-                ps.setInt(4, profile.getElo());
-                ps.setTimestamp(5, Timestamp.from(profile.getLastReset()));
-                ps.setString(6, gson.toJson(profile.getQuotaProgress()));
-                ps.executeUpdate();
-            } catch (SQLException e) {
-                throw new RuntimeException("Error saving profile", e);
-            }
-        }, executor);
-    }
-
-    public CompletableFuture<Void> logHistory(UUID uuid, String type, int eloChange, int newElo, String description) {
-        return CompletableFuture.runAsync(() -> {
-            String query = "INSERT INTO " + tablePrefix + "history (uuid, type, elo_change, new_elo, description, timestamp) VALUES (?, ?, ?, ?, ?, ?)";
-            try (Connection conn = getConnection();
-                 PreparedStatement ps = conn.prepareStatement(query)) {
-                ps.setString(1, uuid.toString());
-                ps.setString(2, type);
-                ps.setInt(3, eloChange);
-                ps.setInt(4, newElo);
-                ps.setString(5, description);
-                ps.setTimestamp(6, Timestamp.from(Instant.now()));
-                ps.executeUpdate();
-            } catch (SQLException e) {
-                throw new RuntimeException("Error logging history", e);
-            }
-        }, executor);
-    }
-
-    public CompletableFuture<List<HistoryEntry>> fetchHistory(UUID uuid, int limit) {
-        return CompletableFuture.supplyAsync(() -> {
-            List<HistoryEntry> list = new ArrayList<>();
-            String query = "SELECT * FROM " + tablePrefix + "history WHERE uuid = ? ORDER BY timestamp DESC, id DESC LIMIT ?";
-            try (Connection conn = getConnection();
-                 PreparedStatement ps = conn.prepareStatement(query)) {
-                ps.setString(1, uuid.toString());
-                ps.setInt(2, limit);
-                try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) {
-                        int id = rs.getInt("id");
-                        Timestamp ts = rs.getTimestamp("timestamp");
-                        Instant timestamp = ts != null ? ts.toInstant() : Instant.now();
-                        String type = rs.getString("type");
-                        int eloChange = rs.getInt("elo_change");
-                        int newElo = rs.getInt("new_elo");
-                        String description = rs.getString("description");
-                        list.add(new HistoryEntry(id, uuid, timestamp, type, eloChange, newElo, description));
-                    }
-                }
-            } catch (SQLException e) {
-                throw new RuntimeException("Error fetching history", e);
-            }
-            return list;
-        }, executor);
     }
 }
