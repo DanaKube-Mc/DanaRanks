@@ -13,14 +13,17 @@ public class MessageManagerTest {
 
     @Test
     public void testMessageLoading(@TempDir Path tempDir) throws Exception {
+        // Arrange
         Logger logger = Logger.getLogger("TestLogger");
 
+        // Act
         MessageManager manager = new MessageManager(
                 tempDir.toFile(),
                 logger,
                 (path, replace) -> { throw new IllegalArgumentException("Resource not found in jar"); }
         );
 
+        // Assert
         java.io.File expectedFile = new java.io.File(tempDir.toFile(), "lang/fr.yml");
         assertTrue(expectedFile.exists());
 

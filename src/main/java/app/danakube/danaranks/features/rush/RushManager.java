@@ -194,6 +194,9 @@ public class RushManager {
     }
 
     public double getPlayerScore(UUID uuid) {
+        if (!scoreTracker.isRegistered(uuid)) {
+            return -1.0;
+        }
         return scoreTracker.getScore(uuid);
     }
 

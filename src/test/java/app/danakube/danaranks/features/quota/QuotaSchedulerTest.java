@@ -9,11 +9,14 @@ public class QuotaSchedulerTest {
 
     @Test
     public void testResetCalculation() {
+        // Arrange
         QuotaScheduler scheduler = new QuotaScheduler("2026-07-03", 4);
-
         Instant now = Instant.parse("2026-07-04T12:00:00Z");
+
+        // Act
         Instant nextReset = scheduler.getNextResetInstant(3, now);
 
+        // Assert
         Instant expected = LocalDateTime.of(2026, 7, 6, 4, 0)
                 .atZone(java.time.ZoneId.systemDefault())
                 .toInstant();
@@ -22,7 +25,10 @@ public class QuotaSchedulerTest {
     
     @Test
     public void testPeriodDaysByLevel() {
+        // Arrange
         QuotaScheduler scheduler = new QuotaScheduler("2026-07-03", 4);
+
+        // Act & Assert
         assertEquals(1, scheduler.getPeriodDays(1));
         assertEquals(2, scheduler.getPeriodDays(2));
         assertEquals(3, scheduler.getPeriodDays(3));

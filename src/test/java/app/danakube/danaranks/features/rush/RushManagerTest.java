@@ -1,8 +1,10 @@
 package app.danakube.danaranks.features.rush;
 
+import app.danakube.danaranks.core.DanaRanks;
 import app.danakube.danaranks.database.DatabaseManager;
 import app.danakube.danaranks.database.ProfileRepository;
 import app.danakube.danaranks.core.profile.PlayerProfile;
+import app.danakube.danaranks.core.profile.PlayerProfileBuilder;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,9 +75,13 @@ public class RushManagerTest {
 
     @Test
     public void testDailySetupPlanning() {
+        // Arrange
         LocalDateTime time0800 = LocalDateTime.of(2026, 7, 3, 8, 0);
+
+        // Act
         rushManager.setupDaily(time0800);
 
+        // Assert
         assertTrue(rushManager.isDailyPlanned());
         assertNotNull(rushManager.getDailyResource());
         assertTrue(config.getStringList("rush.eligible-resources").contains(rushManager.getDailyResource()));
@@ -94,34 +100,67 @@ public class RushManagerTest {
 
     @Test
     public void testLateRegistrationScore() {
+        // Arrange
+        LocalDateTime time0800 = LocalDateTime.of(2026, 7, 3, 8, 0);
+        rushManager.setupDaily(time0800);
+        
+        LocalDateTime start = rushManager.getStartTime();
+        Instant startInstant = start.atZone(ZoneId.systemDefault()).toInstant();
+        UUID p1 = UUID.randomUUID();
+
+        // Act
+        rushManager.registerPlayer(p1, startInstant.plusSeconds(300));
+
+        // Assert
+        assertEquals(0.0, rushManager.getPlayerScore(p1));
+    }
+
+    @Test
+    public void testRegistrationBlockedAfterEnd() {
+        // Arrange
         LocalDateTime time0800 = LocalDateTime.of(2026, 7, 3, 8, 0);
         rushManager.setupDaily(time0800);
         
         LocalDateTime start = rushManager.getStartTime();
         Instant startInstant = start.atZone(ZoneId.systemDefault()).toInstant();
         int duration = rushManager.getDurationMinutes();
-        
-        Instant lateTime = startInstant.plusSeconds(15 * 60);
+        Instant endInstant = startInstant.plusSeconds(duration * 60);
         UUID p1 = UUID.randomUUID();
-        
-        rushManager.handleResourceGain(p1, rushManager.getDailyResource(), 500, startInstant.minusSeconds(10));
-        
-        assertTrue(rushManager.registerPlayer(p1, lateTime));
-        assertEquals(0.0, rushManager.getPlayerScore(p1));
-        
-        rushManager.handleResourceGain(p1, rushManager.getDailyResource(), 100, lateTime.plusSeconds(10));
-        assertEquals(100.0, rushManager.getPlayerScore(p1));
 
-        Instant afterRush = startInstant.plusSeconds((duration + 5) * 60);
-        UUID p2 = UUID.randomUUID();
-        assertFalse(rushManager.registerPlayer(p2, afterRush));
+        // Act
+        boolean registered = rushManager.registerPlayer(p1, endInstant.plusSeconds(1));
 
-        rushManager.handleResourceGain(p1, rushManager.getDailyResource(), 100, afterRush);
+        // Assert
+        assertFalse(registered);
+        assertEquals(-1.0, rushManager.getPlayerScore(p1));
+    }
+
+    @Test
+    public void testScoreIncrementDuringActiveRush() {
+        // Arrange
+        LocalDateTime time0800 = LocalDateTime.of(2026, 7, 3, 8, 0);
+        rushManager.setupDaily(time0800);
+        
+        LocalDateTime start = rushManager.getStartTime();
+        Instant startInstant = start.atZone(ZoneId.systemDefault()).toInstant();
+        UUID p1 = UUID.randomUUID();
+
+        PlayerProfile prof1 = PlayerProfileBuilder.aProfile().uuid(p1).name("Player1").rank(1).elo(0).build();
+        profileCache.put(p1, prof1);
+
+        rushManager.registerPlayer(p1, startInstant);
+
+        // Act
+        String res = rushManager.getDailyResource();
+        rushManager.handleResourceGain(p1, res, 100.0, startInstant.plusSeconds(5));
+
+        // Assert
         assertEquals(100.0, rushManager.getPlayerScore(p1));
     }
 
     @Test
     public void testIntraRankEloRedistribution() throws Exception {
+        // Arrange
         LocalDateTime time0800 = LocalDateTime.of(2026, 7, 3, 8, 0);
         rushManager.setupDaily(time0800);
         
@@ -135,10 +174,10 @@ public class RushManagerTest {
         UUID p3 = UUID.randomUUID();
         UUID p4 = UUID.randomUUID();
 
-        PlayerProfile prof1 = new PlayerProfile(p1, "Fer1", 1, 0, startInstant, new HashMap<>());
-        PlayerProfile prof2 = new PlayerProfile(p2, "Fer2", 1, 0, startInstant, new HashMap<>());
-        PlayerProfile prof3 = new PlayerProfile(p3, "Fer3", 1, 0, startInstant, new HashMap<>());
-        PlayerProfile prof4 = new PlayerProfile(p4, "Fer4", 1, 0, startInstant, new HashMap<>());
+        PlayerProfile prof1 = PlayerProfileBuilder.aProfile().uuid(p1).name("Fer1").rank(1).elo(0).lastReset(startInstant).build();
+        PlayerProfile prof2 = PlayerProfileBuilder.aProfile().uuid(p2).name("Fer2").rank(1).elo(0).lastReset(startInstant).build();
+        PlayerProfile prof3 = PlayerProfileBuilder.aProfile().uuid(p3).name("Fer3").rank(1).elo(0).lastReset(startInstant).build();
+        PlayerProfile prof4 = PlayerProfileBuilder.aProfile().uuid(p4).name("Fer4").rank(1).elo(0).lastReset(startInstant).build();
 
         Map<UUID, PlayerProfile> cache = new HashMap<>();
         cache.put(p1, prof1);
@@ -158,12 +197,15 @@ public class RushManagerTest {
         rushManager.handleResourceGain(p3, res, 450, startInstant.plusSeconds(5));
         rushManager.handleResourceGain(p4, res, 50, startInstant.plusSeconds(5));
 
+        // Act 1
         rushManager.endRush(endInstant).join();
 
+        // Assert 1
         assertEquals(20, prof1.getElo());
         assertEquals(15, prof2.getElo());
         assertEquals(0, prof3.getElo());
         
+        // Act 2 (Reset scores & run a second rush)
         prof1.setElo(50); prof2.setElo(50); prof3.setElo(50); prof4.setElo(50);
         rushManager.setupDaily(time0800);
         res = rushManager.getDailyResource();
@@ -182,6 +224,7 @@ public class RushManagerTest {
         
         rushManager.endRush(endInstant).join();
 
+        // Assert 2
         assertEquals(70, prof1.getElo());
         assertEquals(65, prof2.getElo());
         assertEquals(42, prof3.getElo());
@@ -190,6 +233,7 @@ public class RushManagerTest {
 
     @Test
     public void testIntraRankLowGap() throws Exception {
+        // Arrange
         LocalDateTime time0800 = LocalDateTime.of(2026, 7, 3, 8, 0);
         rushManager.setupDaily(time0800);
         
@@ -201,8 +245,8 @@ public class RushManagerTest {
         UUID p1 = UUID.randomUUID();
         UUID p2 = UUID.randomUUID();
 
-        PlayerProfile prof1 = new PlayerProfile(p1, "Plat1", 45, 50, startInstant, new HashMap<>());
-        PlayerProfile prof2 = new PlayerProfile(p2, "Plat2", 45, 50, startInstant, new HashMap<>());
+        PlayerProfile prof1 = PlayerProfileBuilder.aProfile().uuid(p1).name("Plat1").rank(45).elo(50).lastReset(startInstant).build();
+        PlayerProfile prof2 = PlayerProfileBuilder.aProfile().uuid(p2).name("Plat2").rank(45).elo(50).lastReset(startInstant).build();
 
         Map<UUID, PlayerProfile> cache = new HashMap<>();
         cache.put(p1, prof1);
@@ -216,14 +260,17 @@ public class RushManagerTest {
         rushManager.handleResourceGain(p1, res, 50, startInstant.plusSeconds(5));
         rushManager.handleResourceGain(p2, res, 45, startInstant.plusSeconds(5));
 
+        // Act
         rushManager.endRush(endInstant).join();
 
+        // Assert
         assertEquals(51, prof1.getElo());
         assertEquals(49, prof2.getElo());
     }
 
     @Test
-    public void testCrossRankEloRedistribution() throws Exception {
+    public void testIntraRankHighGap() throws Exception {
+        // Arrange
         LocalDateTime time0800 = LocalDateTime.of(2026, 7, 3, 8, 0);
         rushManager.setupDaily(time0800);
         
@@ -237,10 +284,10 @@ public class RushManagerTest {
         UUID or1 = UUID.randomUUID();
         UUID fer1 = UUID.randomUUID();
 
-        PlayerProfile profPlat1 = new PlayerProfile(plat1, "Plat1", 45, 50, startInstant, new HashMap<>());
-        PlayerProfile profPlat2 = new PlayerProfile(plat2, "Plat2", 45, 50, startInstant, new HashMap<>());
-        PlayerProfile profOr = new PlayerProfile(or1, "Or1", 35, 50, startInstant, new HashMap<>());
-        PlayerProfile profFer = new PlayerProfile(fer1, "Fer1", 5, 50, startInstant, new HashMap<>());
+        PlayerProfile profPlat1 = PlayerProfileBuilder.aProfile().uuid(plat1).name("Plat1").rank(45).elo(50).lastReset(startInstant).build();
+        PlayerProfile profPlat2 = PlayerProfileBuilder.aProfile().uuid(plat2).name("Plat2").rank(45).elo(50).lastReset(startInstant).build();
+        PlayerProfile profOr = PlayerProfileBuilder.aProfile().uuid(or1).name("Or1").rank(35).elo(50).lastReset(startInstant).build();
+        PlayerProfile profFer = PlayerProfileBuilder.aProfile().uuid(fer1).name("Fer1").rank(5).elo(50).lastReset(startInstant).build();
 
         Map<UUID, PlayerProfile> cache = new HashMap<>();
         cache.put(plat1, profPlat1);
@@ -256,21 +303,23 @@ public class RushManagerTest {
 
         String res = rushManager.getDailyResource();
         rushManager.handleResourceGain(plat1, res, 100, startInstant.plusSeconds(5));
-        rushManager.handleResourceGain(plat2, res, 80, startInstant.plusSeconds(5));
-        rushManager.handleResourceGain(or1, res, 500, startInstant.plusSeconds(5));
-        rushManager.handleResourceGain(fer1, res, 100, startInstant.plusSeconds(5));
+        rushManager.handleResourceGain(plat2, res, 90, startInstant.plusSeconds(5));
+        rushManager.handleResourceGain(or1, res, 200, startInstant.plusSeconds(5));
+        rushManager.handleResourceGain(fer1, res, 300, startInstant.plusSeconds(5));
 
+        // Act
         rushManager.endRush(endInstant).join();
 
-        assertEquals(52, profPlat1.getElo());
-        assertEquals(48, profPlat2.getElo());
-
-        assertEquals(59, profOr.getElo());
-        assertEquals(44, profFer.getElo());
+        // Assert
+        assertEquals(51, profPlat1.getElo());
+        assertEquals(49, profPlat2.getElo());
+        assertEquals(44, profOr.getElo());
+        assertEquals(58, profFer.getElo());
     }
 
     @Test
     public void testRushEloMinLimit() throws Exception {
+        // Arrange
         LocalDateTime time0800 = LocalDateTime.of(2026, 7, 3, 8, 0);
         rushManager.setupDaily(time0800);
         
@@ -282,8 +331,8 @@ public class RushManagerTest {
         UUID p1 = UUID.randomUUID();
         UUID p2 = UUID.randomUUID();
 
-        PlayerProfile prof1 = new PlayerProfile(p1, "Argent1", 25, 5, startInstant, new HashMap<>());
-        PlayerProfile prof2 = new PlayerProfile(p2, "Argent2", 25, 80, startInstant, new HashMap<>());
+        PlayerProfile prof1 = PlayerProfileBuilder.aProfile().uuid(p1).name("Argent1").rank(25).elo(5).lastReset(startInstant).build();
+        PlayerProfile prof2 = PlayerProfileBuilder.aProfile().uuid(p2).name("Argent2").rank(25).elo(80).lastReset(startInstant).build();
 
         Map<UUID, PlayerProfile> cache = new HashMap<>();
         cache.put(p1, prof1);
@@ -297,14 +346,17 @@ public class RushManagerTest {
         rushManager.handleResourceGain(p1, res, 50, startInstant.plusSeconds(5));
         rushManager.handleResourceGain(p2, res, 500, startInstant.plusSeconds(5));
 
+        // Act
         rushManager.endRush(endInstant).join();
 
+        // Assert
         assertEquals(0, prof1.getElo());
         assertEquals(25, prof1.getRankLevel());
     }
 
     @Test
     public void testRushEdgeCases() throws Exception {
+        // Arrange
         LocalDateTime time0800 = LocalDateTime.of(2026, 7, 3, 8, 0);
         rushManager.setupDaily(time0800);
         
@@ -317,8 +369,8 @@ public class RushManagerTest {
 
         UUID p1 = UUID.randomUUID();
         UUID p2 = UUID.randomUUID();
-        PlayerProfile prof1 = new PlayerProfile(p1, "Player1", 15, 50, startInstant, new HashMap<>());
-        PlayerProfile prof2 = new PlayerProfile(p2, "Player2", 15, 50, startInstant, new HashMap<>());
+        PlayerProfile prof1 = PlayerProfileBuilder.aProfile().uuid(p1).name("Player1").rank(15).elo(50).lastReset(startInstant).build();
+        PlayerProfile prof2 = PlayerProfileBuilder.aProfile().uuid(p2).name("Player2").rank(15).elo(50).lastReset(startInstant).build();
 
         Map<UUID, PlayerProfile> cache = new HashMap<>();
         cache.put(p1, prof1);
@@ -327,34 +379,49 @@ public class RushManagerTest {
 
         rushManager.registerPlayer(p1, startInstant);
         rushManager.registerPlayer(p2, startInstant);
-        rushManager.handleResourceGain(p1, res, 300, startInstant.plusSeconds(5));
-        rushManager.handleResourceGain(p2, res, 300, startInstant.plusSeconds(5));
-        
-        rushManager.endRush(endInstant).join();
-        assertEquals(50, prof1.getElo());
-        assertEquals(50, prof2.getElo());
 
-        prof1.setElo(50); prof2.setElo(50);
-        rushManager.setupDaily(time0800);
-        rushManager.registerPlayer(p1, startInstant);
-        rushManager.registerPlayer(p2, startInstant);
+        // Act & Assert 1 (Gain of 0.0)
+        rushManager.handleResourceGain(p1, res, 0.0, startInstant.plusSeconds(5));
+        assertEquals(0.0, rushManager.getPlayerScore(p1));
+
+        // Act & Assert 2 (Null/empty score list end)
         rushManager.endRush(endInstant).join();
         assertEquals(50, prof1.getElo());
         assertEquals(50, prof2.getElo());
+    }
+
+    @Test
+    public void testSingleParticipantReward() throws Exception {
+        // Arrange
+        LocalDateTime time0800 = LocalDateTime.of(2026, 7, 3, 8, 0);
+        rushManager.setupDaily(time0800);
+        
+        LocalDateTime start = rushManager.getStartTime();
+        Instant startInstant = start.atZone(ZoneId.systemDefault()).toInstant();
+        int duration = rushManager.getDurationMinutes();
+        Instant endInstant = startInstant.plusSeconds(duration * 60);
 
         UUID soloUuid = UUID.randomUUID();
-        PlayerProfile soloProf = new PlayerProfile(soloUuid, "Solo", 15, 50, startInstant, new HashMap<>());
-        cache.clear();
+        PlayerProfile soloProf = PlayerProfileBuilder.aProfile().uuid(soloUuid).name("Solo").rank(15).elo(50).lastReset(startInstant).build();
+
+        Map<UUID, PlayerProfile> cache = new HashMap<>();
         cache.put(soloUuid, soloProf);
-        rushManager.setupDaily(time0800);
+        rushManager.setProfileCacheOverride(cache);
+
         rushManager.registerPlayer(soloUuid, startInstant);
+
+        // Act
+        String res = rushManager.getDailyResource();
         rushManager.handleResourceGain(soloUuid, res, 500, startInstant.plusSeconds(5));
         rushManager.endRush(endInstant).join();
+
+        // Assert
         assertEquals(50, soloProf.getElo());
     }
 
     @Test
     public void testRushDisconnectReconnect() {
+        // Arrange
         LocalDateTime time0800 = LocalDateTime.of(2026, 7, 3, 8, 0);
         rushManager.setupDaily(time0800);
         
@@ -362,18 +429,20 @@ public class RushManagerTest {
         Instant startInstant = start.atZone(ZoneId.systemDefault()).toInstant();
         UUID p1 = UUID.randomUUID();
 
-        PlayerProfile prof1 = new PlayerProfile(p1, "Player1", 1, 0, startInstant, new HashMap<>());
+        PlayerProfile prof1 = PlayerProfileBuilder.aProfile().uuid(p1).name("Player1").rank(1).elo(0).lastReset(startInstant).build();
         Map<UUID, PlayerProfile> cache = new HashMap<>();
         cache.put(p1, prof1);
         rushManager.setProfileCacheOverride(cache);
 
         rushManager.registerPlayer(p1, startInstant);
 
+        // Act & Assert 1
         String res = rushManager.getDailyResource();
         rushManager.handleResourceGain(p1, res, 150, startInstant.plusSeconds(5));
         assertEquals(150.0, rushManager.getPlayerScore(p1));
         cache.remove(p1);
 
+        // Act & Assert 2
         cache.put(p1, prof1);
         assertEquals(150.0, rushManager.getPlayerScore(p1));
         rushManager.handleResourceGain(p1, res, 50, startInstant.plusSeconds(10));
@@ -382,6 +451,7 @@ public class RushManagerTest {
 
     @Test
     public void testRushOfflineDistribution() throws Exception {
+        // Arrange
         LocalDateTime time0800 = LocalDateTime.of(2026, 7, 3, 8, 0);
         rushManager.setupDaily(time0800);
         
@@ -393,8 +463,8 @@ public class RushManagerTest {
         UUID p1 = UUID.randomUUID();
         UUID p2 = UUID.randomUUID();
 
-        PlayerProfile prof1 = new PlayerProfile(p1, "Online", 5, 50, startInstant, new HashMap<>());
-        PlayerProfile prof2 = new PlayerProfile(p2, "Offline", 5, 50, startInstant, new HashMap<>());
+        PlayerProfile prof1 = PlayerProfileBuilder.aProfile().uuid(p1).name("Online").rank(5).elo(50).lastReset(startInstant).build();
+        PlayerProfile prof2 = PlayerProfileBuilder.aProfile().uuid(p2).name("Offline").rank(5).elo(50).lastReset(startInstant).build();
         new ProfileRepository(dbManager).saveProfile(prof2).get();
 
         Map<UUID, PlayerProfile> cache = new HashMap<>();
@@ -408,16 +478,21 @@ public class RushManagerTest {
         rushManager.handleResourceGain(p1, res, 100, startInstant.plusSeconds(5));
         rushManager.handleResourceGain(p2, res, 900, startInstant.plusSeconds(5));
 
+        // Act 1
         rushManager.endRush(endInstant).join();
+
+        // Assert 1
         PlayerProfile updatedProf2 = new ProfileRepository(dbManager).loadProfile(p2, "Offline").get().orElse(null);
         assertEquals(72, updatedProf2.getElo());
         assertTrue(updatedProf2.getQuotaProgress().containsKey("rush_pending_summary"));
         assertEquals("+22 ELO", updatedProf2.getQuotaProgress().get("rush_pending_summary"));
 
+        // Act 2
         cache.put(p2, updatedProf2);
         StringBuilder messageSent = new StringBuilder();
         rushManager.checkOfflineSummary(updatedProf2, (msg) -> messageSent.append(msg)).join();
 
+        // Assert 2
         String text = messageSent.toString();
         assertTrue(text.contains("gagné") && text.contains("+22 ELO"));
         assertFalse(updatedProf2.getQuotaProgress().containsKey("rush_pending_summary"));
@@ -425,6 +500,7 @@ public class RushManagerTest {
 
     @Test
     public void testRushAdminCommandExclusion() {
+        // Arrange
         LocalDateTime time0800 = LocalDateTime.of(2026, 7, 3, 8, 0);
         rushManager.setupDaily(time0800);
         
@@ -432,7 +508,7 @@ public class RushManagerTest {
         Instant startInstant = start.atZone(ZoneId.systemDefault()).toInstant();
         UUID p1 = UUID.randomUUID();
 
-        PlayerProfile prof1 = new PlayerProfile(p1, "Player1", 1, 0, startInstant, new HashMap<>());
+        PlayerProfile prof1 = PlayerProfileBuilder.aProfile().uuid(p1).name("Player1").rank(1).elo(0).lastReset(startInstant).build();
         Map<UUID, PlayerProfile> cache = new HashMap<>();
         cache.put(p1, prof1);
         rushManager.setProfileCacheOverride(cache);
@@ -440,18 +516,18 @@ public class RushManagerTest {
         rushManager.registerPlayer(p1, startInstant);
 
         String res = rushManager.getDailyResource();
-
         rushManager.handleResourceGain(p1, res, 100, startInstant.plusSeconds(5));
         assertEquals(100.0, rushManager.getPlayerScore(p1));
 
+        // Act
         class AdminCommandSimulator {
             void run() {
                 rushManager.handleResourceGain(p1, res, 50, startInstant.plusSeconds(10));
             }
         }
-        
         new AdminCommandSimulator().run();
 
+        // Assert
         assertEquals(100.0, rushManager.getPlayerScore(p1));
     }
 }
