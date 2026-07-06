@@ -24,6 +24,7 @@ import app.danakube.danaranks.tracker.VanillaXpTracker;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
 import java.util.logging.Logger;
 
 public final class DanaRanks extends JavaPlugin {
@@ -39,6 +40,9 @@ public final class DanaRanks extends JavaPlugin {
     private RushManager rushManager;
     private TrackerRegistry trackerRegistry;
     private MessageManager messageManager;
+    private FileConfiguration guiConfig;
+    private app.danakube.danaranks.ui.shared.MenuFactory menuFactory;
+    private app.danakube.danaranks.features.leaderboard.LeaderboardManager leaderboardManager;
 
     public static DanaRanks getInstance() {
         return instance;
@@ -56,6 +60,12 @@ public final class DanaRanks extends JavaPlugin {
         FileConfiguration config = getConfig();
 
         messageManager = new MessageManager(this);
+        
+        saveResource("gui.yml", false);
+        File guiFile = new File(getDataFolder(), "gui.yml");
+        guiConfig = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(guiFile);
+
+        menuFactory = new app.danakube.danaranks.ui.shared.MenuFactory(this);
 
         String dbType = config.getString("database.type", "SQLITE");
         if (dbType.equalsIgnoreCase("MYSQL")) {
@@ -74,6 +84,12 @@ public final class DanaRanks extends JavaPlugin {
 
         profileRepository = new ProfileRepository(databaseManager);
         historyRepository = new HistoryRepository(databaseManager);
+
+        leaderboardManager = new app.danakube.danaranks.features.leaderboard.LeaderboardManager(profileRepository);
+        leaderboardManager.updateLeaderboard();
+        getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
+            leaderboardManager.updateLeaderboard();
+        }, 1200L, 6000L);
 
         String trackName = config.getString("luckperms.track-name", "danaranks");
         if (getServer().getPluginManager().isPluginEnabled("LuckPerms")) {
@@ -107,6 +123,16 @@ public final class DanaRanks extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new RushListener(this, rushManager), this);
 
         getServer().getCommandMap().register("danaranks", new RushCommand(this, rushManager));
+
+        getCommand("danaranks").setExecutor(new app.danakube.danaranks.admin.AdminCommandExecutor(this));
+        getCommand("danaranks").setTabCompleter(new app.danakube.danaranks.admin.AdminTabCompleter());
+
+        app.danakube.danaranks.core.profile.ProfileCommand profileCmd = new app.danakube.danaranks.core.profile.ProfileCommand(this);
+        getCommand("profile").setExecutor(profileCmd);
+        getCommand("profile").setTabCompleter(profileCmd);
+
+        getCommand("quota").setExecutor(new app.danakube.danaranks.features.quota.QuotaCommand(this));
+        getCommand("leaderboard").setExecutor(new app.danakube.danaranks.features.leaderboard.LeaderboardCommand(this));
 
         getLogger().info(messageManager.getMessage("plugin-enabled", "DanaRanks has been enabled!"));
     }
@@ -168,5 +194,22 @@ public final class DanaRanks extends JavaPlugin {
 
     public MessageManager getMessageManager() {
         return messageManager;
+    }
+
+    public FileConfiguration getGuiConfig() {
+        return guiConfig;
+    }
+
+    public app.danakube.danaranks.ui.shared.MenuFactory getMenuFactory() {
+        return menuFactory;
+    }
+
+    public app.danakube.danaranks.features.leaderboard.LeaderboardManager getLeaderboardManager() {
+        return leaderboardManager;
+    }
+
+    public void reloadGuiConfig() {
+        File guiFile = new File(getDataFolder(), "gui.yml");
+        guiConfig = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(guiFile);
     }
 }

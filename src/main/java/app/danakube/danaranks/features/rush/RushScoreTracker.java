@@ -25,6 +25,10 @@ public class RushScoreTracker {
         state.getRegisteredScores().computeIfPresent(uuid, (k, current) -> current + amount);
     }
 
+    public void unregisterPlayer(UUID uuid) {
+        state.getRegisteredScores().remove(uuid);
+    }
+
     public void clear() {
         state.getRegisteredScores().clear();
     }

@@ -1,34 +1,34 @@
 package app.danakube.danaranks.api.event;
 
+import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
-import java.util.UUID;
 
 /**
  * Event triggered when a player ranks up.
  */
 public class PlayerRankUpEvent extends Event {
     private static final HandlerList HANDLERS = new HandlerList();
-    private final UUID playerUuid;
-    private final int ranksGained;
-    private final int newRank;
+    private final Player player;
+    private final int oldRankLevel;
+    private final int newRankLevel;
 
-    public PlayerRankUpEvent(UUID playerUuid, int ranksGained, int newRank) {
-        this.playerUuid = playerUuid;
-        this.ranksGained = ranksGained;
-        this.newRank = newRank;
+    public PlayerRankUpEvent(Player player, int oldRankLevel, int newRankLevel) {
+        this.player = player;
+        this.oldRankLevel = oldRankLevel;
+        this.newRankLevel = newRankLevel;
     }
 
-    public UUID getPlayerUuid() {
-        return playerUuid;
+    public Player getPlayer() {
+        return player;
     }
 
-    public int getRanksGained() {
-        return ranksGained;
+    public int getOldRankLevel() {
+        return oldRankLevel;
     }
 
-    public int getNewRank() {
-        return newRank;
+    public int getNewRankLevel() {
+        return newRankLevel;
     }
 
     @Override

@@ -5,6 +5,7 @@ import app.danakube.danaranks.api.event.PlayerRankUpEvent;
 import app.danakube.danaranks.database.HistoryRepository;
 import app.danakube.danaranks.hooks.PermissionHook;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 
 import java.util.UUID;
 
@@ -17,82 +18,84 @@ public class EloService {
         this.historyRepository = historyRepository;
     }
 
-    public synchronized int addElo(PlayerProfile profile, int amount, String reason) {
+    public int addElo(PlayerProfile profile, int amount, String reason) {
+        return addElo(profile, amount, reason, false);
+    }
+
+    public synchronized int addElo(PlayerProfile profile, int amount, String reason, boolean allowDemotion) {
         int oldElo = profile.getElo();
         int oldRank = profile.getRankLevel();
 
-        int newRank = oldRank;
-        int newElo = oldElo;
+        int cumulativeElo = (oldRank - 1) * 100 + oldElo;
+        int newCumulativeElo = cumulativeElo + amount;
 
-        if (oldRank >= 50) {
-            newElo = oldElo + amount;
-            if (newElo < 0) {
-                newElo = 0;
-            }
-            profile.setElo(newElo);
-        } else {
-            int totalElo = oldElo + amount;
-            if (totalElo < 0) {
-                profile.setElo(0);
-                newElo = 0;
-            } else {
-                int ranksGained = totalElo / 100;
-                int remainingElo = totalElo % 100;
+        int floorCumulativeElo = allowDemotion ? 0 : (oldRank - 1) * 100;
 
-                if (ranksGained > 0) {
-                    newRank = Math.min(50, oldRank + ranksGained);
-                    if (newRank == 50) {
-                        int cumulativeElo = (oldRank - 1) * 100 + oldElo + amount;
-                        newElo = cumulativeElo - 4900;
-                    } else {
-                        newElo = remainingElo;
-                    }
-                    profile.setRankLevel(newRank);
-                    profile.setElo(newElo);
-                } else {
-                    newElo = remainingElo;
-                    profile.setElo(newElo);
-                }
-            }
+        if (newCumulativeElo < floorCumulativeElo) {
+            newCumulativeElo = floorCumulativeElo;
         }
 
-        int eloChange = newElo - oldElo;
-        int actualRanksGained = newRank - oldRank;
+        int newRank;
+        int newElo;
 
-        if (eloChange != 0 || actualRanksGained > 0) {
+        if (newCumulativeElo >= 4900) {
+            newRank = 50;
+            newElo = newCumulativeElo - 4900;
+        } else {
+            newRank = (newCumulativeElo / 100) + 1;
+            newElo = newCumulativeElo % 100;
+        }
+
+        profile.setRankLevel(newRank);
+        profile.setElo(newElo);
+
+        int eloChange = newCumulativeElo - cumulativeElo;
+        int rankChange = newRank - oldRank;
+
+        if (eloChange != 0 || rankChange != 0) {
             if (historyRepository != null) {
                 try {
-                    historyRepository.logHistory(profile.getUuid(), reason, eloChange, newElo, "ELO Change: " + reason);
+                    historyRepository.logHistory(profile.getUuid(), reason, eloChange, newElo, reason);
                 } catch (Exception e) {
-                    // Safety for test environments
+                    // Safety for tests
                 }
             }
             try {
-                if (Bukkit.getServer() != null && Bukkit.getPluginManager() != null) {
-                    Bukkit.getPluginManager().callEvent(new PlayerEloChangeEvent(profile.getUuid(), eloChange, newElo, reason));
+                Player player = Bukkit.getPlayer(profile.getUuid());
+                if (player != null && Bukkit.getServer() != null && Bukkit.getPluginManager() != null) {
+                    Bukkit.getPluginManager().callEvent(new PlayerEloChangeEvent(player, oldElo, newElo, eloChange, reason));
                 }
             } catch (Exception e) {
-                // Ignore in unit tests where Bukkit is not mock-initialized
+                // Ignore in tests
             }
         }
 
-        if (actualRanksGained > 0) {
+        if (rankChange > 0) {
             if (permissionHook != null) {
                 try {
-                    permissionHook.promote(profile.getUuid(), actualRanksGained);
+                    permissionHook.promote(profile.getUuid(), rankChange);
                 } catch (Exception e) {
                     // Ignore
                 }
             }
             try {
-                if (Bukkit.getServer() != null && Bukkit.getPluginManager() != null) {
-                    Bukkit.getPluginManager().callEvent(new PlayerRankUpEvent(profile.getUuid(), actualRanksGained, newRank));
+                Player player = Bukkit.getPlayer(profile.getUuid());
+                if (player != null && Bukkit.getServer() != null && Bukkit.getPluginManager() != null) {
+                    Bukkit.getPluginManager().callEvent(new PlayerRankUpEvent(player, oldRank, newRank));
                 }
             } catch (Exception e) {
-                // Ignore in unit tests
+                // Ignore in tests
+            }
+        } else if (rankChange < 0) {
+            if (permissionHook != null) {
+                try {
+                    permissionHook.demote(profile.getUuid(), -rankChange);
+                } catch (Exception e) {
+                    // Ignore
+                }
             }
         }
 
-        return actualRanksGained;
+        return rankChange;
     }
 }

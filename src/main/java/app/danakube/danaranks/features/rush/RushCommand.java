@@ -68,6 +68,9 @@ public class RushCommand extends Command {
             case "join":
                 handleJoin(player);
                 break;
+            case "leave":
+                handleLeave(player);
+                break;
             case "status":
                 handleStatus(player);
                 break;
@@ -79,6 +82,14 @@ public class RushCommand extends Command {
         return true;
     }
 
+    private void handleLeave(Player player) {
+        boolean success = rushManager.unregisterPlayer(player.getUniqueId());
+        if (success) {
+            player.sendMessage(getMessage("rush-left", "<green>[Rush] Vous avez quitté le Rush en cours. Vos points ont été réinitialisés.</green>"));
+        } else {
+            player.sendMessage(getMessage("rush-leave-failed", "<red>[Rush] Vous n'êtes pas inscrit au Rush actuel.</red>"));
+        }
+    }
 
     private void handleJoin(Player player) {
         if (!rushManager.isDailyPlanned()) {
@@ -146,6 +157,7 @@ public class RushCommand extends Command {
         player.sendMessage(getMessage("rush-help", 
                 "<blue>[Rush] Commandes disponibles :\n" +
                 " - <yellow>/rush join</yellow> : S'inscrire au Rush quotidien.\n" +
+                " - <yellow>/rush leave</yellow> : Quitter le Rush en cours.\n" +
                 " - <yellow>/rush status</yellow> : Voir le statut du Rush du jour.</blue>"));
     }
 
@@ -154,6 +166,7 @@ public class RushCommand extends Command {
         if (args.length == 1) {
             List<String> list = new ArrayList<>();
             list.add("join");
+            list.add("leave");
             list.add("status");
             
             List<String> completions = new ArrayList<>();

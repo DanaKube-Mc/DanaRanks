@@ -11,12 +11,12 @@ import java.util.UUID;
 public class DanaRushEndEvent extends Event {
     private static final HandlerList HANDLERS = new HandlerList();
     private final String resource;
-    private final Map<UUID, Double> scores;
+    private final Map<UUID, Double> playerScores;
     private final Map<UUID, Integer> eloChanges;
 
-    public DanaRushEndEvent(String resource, Map<UUID, Double> scores, Map<UUID, Integer> eloChanges) {
+    public DanaRushEndEvent(String resource, Map<UUID, Double> playerScores, Map<UUID, Integer> eloChanges) {
         this.resource = resource;
-        this.scores = scores;
+        this.playerScores = playerScores;
         this.eloChanges = eloChanges;
     }
 
@@ -24,8 +24,8 @@ public class DanaRushEndEvent extends Event {
         return resource;
     }
 
-    public Map<UUID, Double> getScores() {
-        return scores;
+    public Map<UUID, Double> getPlayerScores() {
+        return playerScores;
     }
 
     public Map<UUID, Integer> getEloChanges() {

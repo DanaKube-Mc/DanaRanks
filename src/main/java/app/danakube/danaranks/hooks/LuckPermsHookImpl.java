@@ -46,6 +46,27 @@ public class LuckPermsHookImpl implements PermissionHook {
         });
     }
 
+    @Override
+    public void demote(UUID uuid, int ranksLost) {
+        if (api == null) {
+            return;
+        }
+
+        if (ranksLost <= 0) {
+            return;
+        }
+
+        api.getUserManager().loadUser(uuid).thenAcceptAsync(user -> {
+            Track track = api.getTrackManager().getTrack(trackName);
+            if (track != null && user != null) {
+                for (int i = 0; i < ranksLost; i++) {
+                    track.demote(user, ImmutableContextSet.empty());
+                }
+                api.getUserManager().saveUser(user).join();
+            }
+        });
+    }
+
     public LuckPerms getApi() {
         return api;
     }

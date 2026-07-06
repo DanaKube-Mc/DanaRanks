@@ -14,4 +14,18 @@ dependencies:
       load: BEFORE
       required: false
 
+commands:
+  danaranks:
+    description: Commande d'administration principale de DanaRanks.
+    permission: danaranks.admin
+    aliases: [dr]
+  profile:
+    description: Ouvre le profil du joueur.
+    aliases: [ranks]
+  quota:
+    description: Ouvre les quotas du joueur.
+  leaderboard:
+    description: Ouvre le classement global.
+    aliases: [top]
+
 

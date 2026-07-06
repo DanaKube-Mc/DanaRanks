@@ -62,4 +62,46 @@ public class PlayerProfileTest {
         int cumulativeElo = (profile.getRankLevel() - 1) * 100 + profile.getElo();
         assertEquals(100, cumulativeElo);
     }
+
+    @Test
+    public void testAdminAddEloMultiRankUp() {
+        PlayerProfile profile = new PlayerProfile(UUID.randomUUID(), "TestPlayer", 1, 0, Instant.now(), new HashMap<>());
+        EloService eloService = new EloService(null, null);
+        
+        int ranksGained = eloService.addElo(profile, 250, "Admin addelo");
+        
+        assertEquals(2, ranksGained);
+        assertEquals(3, profile.getRankLevel());
+        assertEquals(50, profile.getElo());
+    }
+
+    @Test
+    public void testAdminRemoveEloDemotion() {
+        class PermissionHookSpy implements app.danakube.danaranks.hooks.PermissionHook {
+            int promotedRanks = 0;
+            int demotedRanks = 0;
+
+            @Override
+            public void promote(UUID uuid, int ranksGained) {
+                promotedRanks += ranksGained;
+            }
+
+            @Override
+            public void demote(UUID uuid, int ranksLost) {
+                demotedRanks += ranksLost;
+            }
+        }
+        
+        PermissionHookSpy spy = new PermissionHookSpy();
+        PlayerProfile profile = new PlayerProfile(UUID.randomUUID(), "TestPlayer", 5, 20, Instant.now(), new HashMap<>());
+        EloService eloService = new EloService(spy, null);
+        
+        int ranksGained = eloService.addElo(profile, -150, "Admin removeelo", true);
+        
+        assertEquals(-2, ranksGained);
+        assertEquals(3, profile.getRankLevel());
+        assertEquals(70, profile.getElo());
+        assertEquals(2, spy.demotedRanks);
+        assertEquals(0, spy.promotedRanks);
+    }
 }

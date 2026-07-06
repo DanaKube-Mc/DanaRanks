@@ -1,36 +1,42 @@
 package app.danakube.danaranks.api.event;
 
+import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
-import java.util.UUID;
 
 /**
  * Event triggered when a player's ELO changes.
  */
 public class PlayerEloChangeEvent extends Event {
     private static final HandlerList HANDLERS = new HandlerList();
-    private final UUID playerUuid;
-    private final int eloChange;
+    private final Player player;
+    private final int oldElo;
     private final int newElo;
+    private final int changeAmount;
     private final String reason;
 
-    public PlayerEloChangeEvent(UUID playerUuid, int eloChange, int newElo, String reason) {
-        this.playerUuid = playerUuid;
-        this.eloChange = eloChange;
+    public PlayerEloChangeEvent(Player player, int oldElo, int newElo, int changeAmount, String reason) {
+        this.player = player;
+        this.oldElo = oldElo;
         this.newElo = newElo;
+        this.changeAmount = changeAmount;
         this.reason = reason;
     }
 
-    public UUID getPlayerUuid() {
-        return playerUuid;
+    public Player getPlayer() {
+        return player;
     }
 
-    public int getEloChange() {
-        return eloChange;
+    public int getOldElo() {
+        return oldElo;
     }
 
     public int getNewElo() {
         return newElo;
+    }
+
+    public int getChangeAmount() {
+        return changeAmount;
     }
 
     public String getReason() {

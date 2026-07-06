@@ -1,0 +1,94 @@
+# Configuration des interfaces graphiques (GUIs)
+menus:
+  quota:
+    title: "<dark_gray>Vos Quotas Périodiques"
+    size: 27
+    objectives:
+      format: "<yellow>%resource% : <gray>%bar% %progress%/%target% (<gold>%percentage%</gold>)"
+      bar-symbol-filled: "█"
+      bar-symbol-empty: "░"
+      bar-size: 10
+    items:
+      clock:
+        material: "CLOCK"
+        slot: 22
+        name: "<aqua>Temps restant"
+        lore:
+          - "<gray>Temps restant avant le reset :"
+          - "<yellow>%time_remaining%"
+      border:
+        material: "GRAY_STAINED_GLASS_PANE"
+        slots: [0, 1, 2, 3, 5, 6, 7, 8, 9, 17, 18, 19, 20, 21, 23, 24, 25, 26]
+
+  profile:
+    title: "<dark_gray>Profil de %player%"
+    size: 45
+    timeline:
+      row: 2 # Ligne 3 (slots 18 à 26)
+      materials:
+        past: "GRAY_DYE"
+        current: "GOLD_BLOCK"
+        future: "RED_DYE"
+    items:
+      player-head:
+        slot: 13
+        name: "<gold>%player%"
+        lore:
+          - "<gray>Grade actuel : <yellow>%rank%"
+          - "<gray>ELO actuel : <yellow>%elo%/100"
+          - "<gray>Classement : <yellow>#%position%"
+      history-button:
+        material: "BOOK"
+        slot: 31
+        name: "<aqua>Historique d'ELO"
+        lore:
+          - "<gray>Cliquez pour voir vos transactions d'ELO."
+      leaderboard-button:
+        material: "GOLD_INGOT"
+        slot: 33
+        name: "<gold>Classement Global"
+        lore:
+          - "<gray>Cliquez pour ouvrir le classement global."
+      border:
+        material: "GRAY_STAINED_GLASS_PANE"
+        slots: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 17, 27, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44]
+
+  leaderboard:
+    title: "<dark_gray>Classement Global (Top 50)"
+    size: 54
+    items:
+      profile-button:
+        material: "BARRIER"
+        slot: 49
+        name: "<red>Retour au Profil"
+        lore:
+          - "<gray>Cliquez pour retourner à votre profil."
+      border:
+        material: "GRAY_STAINED_GLASS_PANE"
+        slots: [45, 46, 47, 48, 50, 51, 52, 53]
+
+  history:
+    title: "<dark_gray>Historique d'ELO de %player% (Page %page%)"
+    size: 54
+    items:
+      prev-page:
+        material: "ARROW"
+        slot: 47
+        name: "<yellow>Page Précédente"
+        lore:
+          - "<gray>Cliquez pour aller à la page précédente."
+      next-page:
+        material: "ARROW"
+        slot: 51
+        name: "<yellow>Page Suivante"
+        lore:
+          - "<gray>Cliquez pour aller à la page suivante."
+      back-profile:
+        material: "BARRIER"
+        slot: 49
+        name: "<red>Retour au Profil"
+        lore:
+          - "<gray>Cliquez pour retourner à votre profil."
+      border:
+        material: "GRAY_STAINED_GLASS_PANE"
+        slots: [45, 46, 48, 50, 52, 53]

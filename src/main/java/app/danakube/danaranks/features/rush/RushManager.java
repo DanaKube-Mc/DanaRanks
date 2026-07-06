@@ -180,6 +180,19 @@ public class RushManager {
         return true;
     }
 
+    public boolean unregisterPlayer(UUID uuid) {
+        if (!scoreTracker.isRegistered(uuid)) {
+            return false;
+        }
+        scoreTracker.unregisterPlayer(uuid);
+        Player player = org.bukkit.Bukkit.getPlayer(uuid);
+        if (player != null) {
+            visualManager.hideActiveBar(player);
+        }
+        logger.info("[Rush] Player unregistered (left the event): " + uuid);
+        return true;
+    }
+
     public double getPlayerScore(UUID uuid) {
         return scoreTracker.getScore(uuid);
     }
@@ -305,7 +318,7 @@ public class RushManager {
                         Map.of("%resource%", state.getDailyResource(), "%duration%", String.valueOf(state.getDurationMinutes()))));
                 try {
                     if (Bukkit.getServer() != null && Bukkit.getPluginManager() != null) {
-                        Bukkit.getPluginManager().callEvent(new DanaRushStartEvent(state.getDailyResource(), state.getDurationMinutes()));
+                        Bukkit.getPluginManager().callEvent(new DanaRushStartEvent(state.getDailyResource(), state.getDurationMinutes(), startInstant));
                     }
                 } catch (Exception e) {
                     // Ignore
@@ -508,5 +521,53 @@ public class RushManager {
         long m = seconds / 60;
         long s = seconds % 60;
         return String.format("%02d:%02d", m, s);
+    }
+
+    public void forceStartRush(String resource, int durationMinutes) {
+        LocalDateTime now = LocalDateTime.now();
+        Instant nowInstant = now.atZone(ZoneId.systemDefault()).toInstant();
+
+        state.setDailyPlanned(true);
+        state.setLastPlannedDate(now.toLocalDate());
+        state.setDailyResource(resource);
+        state.setDurationMinutes(durationMinutes);
+        state.setStartTime(now);
+        state.setRushActive(true);
+        scoreTracker.clear();
+
+        visualManager.hideAnnounceBar();
+        sendDiscordWebhook(formatMessage("rush-discord-started",
+                "[Rush] Le Rush quotidien sur la ressource %resource% vient de démarrer pour %duration% minutes !",
+                Map.of("%resource%", resource, "%duration%", String.valueOf(durationMinutes))));
+        try {
+            if (Bukkit.getServer() != null && Bukkit.getPluginManager() != null) {
+                Bukkit.getPluginManager().callEvent(new DanaRushStartEvent(resource, durationMinutes, nowInstant));
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+        Bukkit.broadcast(getMessageComponent("rush-started-announcement",
+                "<blue>[Rush] Un Rush compétitif vient de commencer sur la ressource <gold>%resource%</gold> pour <yellow>%duration%</yellow> minutes ! Tapez <green>/rush join</green> pour y participer !</blue>",
+                Map.of("%resource%", resource, "%duration%", String.valueOf(durationMinutes))));
+    }
+
+    public void forceStopRush() {
+        state.setRushActive(false);
+        state.setDailyPlanned(false);
+        scoreTracker.clear();
+        visualManager.clearAllActiveBars();
+        visualManager.hideAnnounceBar();
+        Bukkit.broadcast(getMessageComponent("rush-stopped-announcement",
+                "<red>[Rush] Le Rush en cours a été arrêté prématurément par un administrateur. Aucune récompense ne sera distribuée.</red>",
+                java.util.Collections.emptyMap()));
+    }
+
+    public void reloadRushPlan() {
+        state.setRushActive(false);
+        state.setDailyPlanned(false);
+        scoreTracker.clear();
+        visualManager.clearAllActiveBars();
+        visualManager.hideAnnounceBar();
+        setupDaily(LocalDateTime.now());
     }
 }

@@ -65,16 +65,20 @@ public class DatabaseManagerTest {
 
     @Test
     public void testOfflineEloModification() throws Exception {
-        class PromotionSpy implements BiConsumer<UUID, Integer> {
+        class PromotionSpy implements app.danakube.danaranks.hooks.PermissionHook {
             int callCount = 0;
             UUID lastUuid = null;
             int lastRanks = 0;
 
             @Override
-            public void accept(UUID uuid, Integer ranks) {
+            public void promote(UUID uuid, int ranks) {
                 callCount++;
                 lastUuid = uuid;
                 lastRanks = ranks;
+            }
+
+            @Override
+            public void demote(UUID uuid, int ranks) {
             }
         }
 
@@ -90,7 +94,7 @@ public class DatabaseManagerTest {
 
             PlayerProfile profile = profileRepo.loadProfile(uuid, name).get().orElseGet(() -> new PlayerProfile(uuid, name));
 
-            EloService eloService = new EloService(spy::accept, historyRepo);
+            EloService eloService = new EloService(spy, historyRepo);
             eloService.addElo(profile, 150, "TEST");
 
             assertEquals(1, spy.callCount);
