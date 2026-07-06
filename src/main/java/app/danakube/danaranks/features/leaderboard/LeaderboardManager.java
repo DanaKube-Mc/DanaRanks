@@ -2,7 +2,6 @@ package app.danakube.danaranks.features.leaderboard;
 
 import app.danakube.danaranks.database.ProfileRepository;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;

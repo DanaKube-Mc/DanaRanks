@@ -7,7 +7,6 @@ import app.danakube.danaranks.hooks.PermissionHook;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import java.util.UUID;
 
 public class EloService {
     private final PermissionHook permissionHook;

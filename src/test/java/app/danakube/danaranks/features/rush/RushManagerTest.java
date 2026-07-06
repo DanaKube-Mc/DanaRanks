@@ -1,6 +1,5 @@
 package app.danakube.danaranks.features.rush;
 
-import app.danakube.danaranks.core.DanaRanks;
 import app.danakube.danaranks.database.DatabaseManager;
 import app.danakube.danaranks.database.ProfileRepository;
 import app.danakube.danaranks.core.profile.PlayerProfile;

@@ -25,7 +25,8 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
-import java.util.logging.Logger;
+import app.danakube.danaranks.ui.shared.PaperCommandWrapper;
+import java.util.List;
 
 public final class DanaRanks extends JavaPlugin {
     private static DanaRanks instance;
@@ -124,15 +125,46 @@ public final class DanaRanks extends JavaPlugin {
 
         getServer().getCommandMap().register("danaranks", new RushCommand(this, rushManager));
 
-        getCommand("danaranks").setExecutor(new app.danakube.danaranks.admin.AdminCommandExecutor(this));
-        getCommand("danaranks").setTabCompleter(new app.danakube.danaranks.admin.AdminTabCompleter());
+        // Enregistrement de la commande d'administration principale (/danaranks admin)
+        getServer().getCommandMap().register("danaranks", new PaperCommandWrapper(
+                "danaranks",
+                "Commande d'administration principale de DanaRanks",
+                "/danaranks admin",
+                List.of("ranks", "dr"),
+                new app.danakube.danaranks.admin.AdminCommandExecutor(this),
+                new app.danakube.danaranks.admin.AdminTabCompleter()
+        ));
 
+        // Enregistrement de la commande joueur /profile
         app.danakube.danaranks.core.profile.ProfileCommand profileCmd = new app.danakube.danaranks.core.profile.ProfileCommand(this);
-        getCommand("profile").setExecutor(profileCmd);
-        getCommand("profile").setTabCompleter(profileCmd);
+        getServer().getCommandMap().register("danaranks", new PaperCommandWrapper(
+                "profile",
+                "Affiche votre profil de rangs",
+                "/profile",
+                List.of(),
+                profileCmd,
+                profileCmd
+        ));
 
-        getCommand("quota").setExecutor(new app.danakube.danaranks.features.quota.QuotaCommand(this));
-        getCommand("leaderboard").setExecutor(new app.danakube.danaranks.features.leaderboard.LeaderboardCommand(this));
+        // Enregistrement de la commande joueur /quota
+        getServer().getCommandMap().register("danaranks", new PaperCommandWrapper(
+                "quota",
+                "Affiche vos objectifs de quota",
+                "/quota",
+                List.of(),
+                new app.danakube.danaranks.features.quota.QuotaCommand(this),
+                null
+        ));
+
+        // Enregistrement de la commande joueur /leaderboard
+        getServer().getCommandMap().register("danaranks", new PaperCommandWrapper(
+                "leaderboard",
+                "Affiche le classement global",
+                "/leaderboard",
+                List.of("ranksmap", "topranks", "rankstop"),
+                new app.danakube.danaranks.features.leaderboard.LeaderboardCommand(this),
+                null
+        ));
 
         getLogger().info(messageManager.getMessage("plugin-enabled", "DanaRanks has been enabled!"));
     }

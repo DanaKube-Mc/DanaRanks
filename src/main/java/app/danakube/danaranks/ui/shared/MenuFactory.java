@@ -17,10 +17,8 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 public class MenuFactory implements Listener {
-    private final JavaPlugin plugin;
 
     public MenuFactory(JavaPlugin plugin) {
-        this.plugin = plugin;
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
