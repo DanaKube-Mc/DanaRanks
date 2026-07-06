@@ -19,14 +19,18 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class RushCommand implements CommandExecutor, TabCompleter {
+public class RushCommand extends Command {
 
     private final DanaRanks plugin;
     private final RushManager rushManager;
 
     public RushCommand(DanaRanks plugin, RushManager rushManager) {
+        super("rush");
         this.plugin = plugin;
         this.rushManager = rushManager;
+        setAliases(List.of("ranksrush", "dailyrush"));
+        setDescription("Commande principale pour le Rush quotidien.");
+        setPermission("danaranks.command.rush");
     }
 
     private net.kyori.adventure.text.Component getMessage(String key, String defaultValue) {
@@ -47,7 +51,7 @@ public class RushCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(getMessage("rush-player-only", "<red>Seuls les joueurs peuvent utiliser cette commande.</red>"));
             return true;
@@ -74,6 +78,7 @@ public class RushCommand implements CommandExecutor, TabCompleter {
 
         return true;
     }
+
 
     private void handleJoin(Player player) {
         if (!rushManager.isDailyPlanned()) {
@@ -145,7 +150,7 @@ public class RushCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+    public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) throws IllegalArgumentException {
         if (args.length == 1) {
             List<String> list = new ArrayList<>();
             list.add("join");

@@ -11,8 +11,4 @@ dependencies:
       load: BEFORE
       required: true
 
-commands:
-  rush:
-    description: Commande principale pour l'événement Rush Quotidien.
-    permission: danaranks.command.rush
-    aliases: [ranksrush, dailyrush]
+

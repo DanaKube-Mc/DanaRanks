@@ -96,7 +96,7 @@ public final class DanaRanks extends JavaPlugin {
         rushManager.loadConfig(config);
         rushManager.startScheduler();
 
-        getCommand("rush").setExecutor(new RushCommand(this, rushManager));
+        getServer().getCommandMap().register("danaranks", new RushCommand(this, rushManager));
 
         getLogger().info(messageManager.getMessage("plugin-enabled", "DanaRanks has been enabled!"));
     }
