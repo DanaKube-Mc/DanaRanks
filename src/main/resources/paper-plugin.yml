@@ -10,6 +10,15 @@ dependencies:
     LuckPerms:
       load: BEFORE
       required: true
+    ExcellentEconomy:
+      load: BEFORE
+      required: true
+    ExcellentJobs:
+      load: BEFORE
+      required: true
+    DanaTools:
+      load: BEFORE
+      required: true
     Vault:
       load: BEFORE
       required: false

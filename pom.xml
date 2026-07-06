@@ -129,6 +129,13 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.4.1</version>
+                <configuration>
+                    <excludes>
+                        <exclude>su/nightexpress/excellentjobs/**</exclude>
+                        <exclude>su/nightexpress/excellenteconomy/**</exclude>
+                        <exclude>app/danakube/danatools/**</exclude>
+                    </excludes>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
