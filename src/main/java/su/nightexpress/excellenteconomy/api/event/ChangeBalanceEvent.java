@@ -8,13 +8,13 @@ import org.jetbrains.annotations.NotNull;
 public class ChangeBalanceEvent extends Event {
     private static final HandlerList handlers = new HandlerList();
     private final Player player;
-    private final double amount;
-    private final String reason;
+    private final double oldAmount;
+    private final double newAmount;
 
-    public ChangeBalanceEvent(@NotNull Player player, double amount, @NotNull String reason) {
+    public ChangeBalanceEvent(@NotNull Player player, double oldAmount, double newAmount) {
         this.player = player;
-        this.amount = amount;
-        this.reason = reason;
+        this.oldAmount = oldAmount;
+        this.newAmount = newAmount;
     }
 
     @NotNull
@@ -22,13 +22,12 @@ public class ChangeBalanceEvent extends Event {
         return player;
     }
 
-    public double getAmount() {
-        return amount;
+    public double getOldAmount() {
+        return oldAmount;
     }
 
-    @NotNull
-    public String getReason() {
-        return reason;
+    public double getNewAmount() {
+        return newAmount;
     }
 
     @Override

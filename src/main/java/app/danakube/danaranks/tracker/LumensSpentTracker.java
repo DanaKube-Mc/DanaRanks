@@ -22,16 +22,8 @@ public class LumensSpentTracker implements ResourceTracker {
         Player player = event.getPlayer();
         if (player == null) return;
 
-        double amount = event.getAmount();
+        double amount = event.getNewAmount() - event.getOldAmount();
         if (amount >= 0) return;
-
-        String reason = event.getReason();
-        if (reason != null) {
-            String lower = reason.toLowerCase();
-            if (lower.contains("pay") || lower.contains("transfer")) {
-                return;
-            }
-        }
 
         double spentAmount = Math.abs(amount);
 
