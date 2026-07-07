@@ -1,6 +1,7 @@
 package app.danakube.danaranks.features.rush;
 
 import app.danakube.danaranks.core.DanaRanks;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -30,11 +31,11 @@ public class RushCommand extends Command {
         setPermission("danaranks.command.rush");
     }
 
-    private net.kyori.adventure.text.Component getMessage(String key, String defaultValue) {
+    private Component getMessage(String key, String defaultValue) {
         return getMessage(key, defaultValue, Collections.emptyMap());
     }
 
-    private net.kyori.adventure.text.Component getMessage(String key, String defaultValue, Map<String, String> placeholders) {
+    private Component getMessage(String key, String defaultValue, Map<String, String> placeholders) {
         String raw;
         if (plugin != null && plugin.getMessageManager() != null) {
             raw = plugin.getMessageManager().getRawMessage(key, defaultValue);

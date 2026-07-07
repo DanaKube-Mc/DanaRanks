@@ -15,6 +15,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.format.TextDecoration;
 
 public class MenuFactory implements Listener {
 
@@ -45,7 +48,7 @@ public class MenuFactory implements Listener {
     }
 
     public Inventory createInventory(String title, int size, CustomHolder holder) {
-        net.kyori.adventure.text.Component componentTitle = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(title);
+        Component componentTitle = MiniMessage.miniMessage().deserialize(title);
         Inventory inv = Bukkit.createInventory(holder, size, componentTitle);
         holder.setInventory(inv);
         return inv;
@@ -55,15 +58,15 @@ public class MenuFactory implements Listener {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            net.kyori.adventure.text.Component nameComponent = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+            Component nameComponent = MiniMessage.miniMessage()
                     .deserialize(name)
-                    .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false);
+                    .decoration(TextDecoration.ITALIC, false);
             meta.displayName(nameComponent);
             if (lore != null) {
-                List<net.kyori.adventure.text.Component> serializedLore = lore.stream()
-                        .map(line -> net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                List<Component> serializedLore = lore.stream()
+                        .map(line -> MiniMessage.miniMessage()
                                 .deserialize(line)
-                                .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false))
+                                .decoration(TextDecoration.ITALIC, false))
                         .toList();
                 meta.lore(serializedLore);
             }

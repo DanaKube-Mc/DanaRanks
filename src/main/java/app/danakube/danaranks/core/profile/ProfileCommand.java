@@ -25,7 +25,7 @@ public class ProfileCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("Only players can execute this command.");
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("player-only", "<red>Seuls les joueurs peuvent exécuter cette commande.</red>"));
             return true;
         }
 

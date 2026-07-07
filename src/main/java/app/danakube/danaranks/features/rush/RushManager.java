@@ -14,6 +14,8 @@ import app.danakube.danaranks.api.event.DanaRushEndEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.command.CommandSender;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
 import java.time.Instant;
@@ -183,7 +185,7 @@ public class RushManager {
             return false;
         }
         scoreTracker.unregisterPlayer(uuid);
-        Player player = org.bukkit.Bukkit.getPlayer(uuid);
+        Player player = Bukkit.getPlayer(uuid);
         if (player != null) {
             visualManager.hideActiveBar(player);
         }
@@ -412,7 +414,7 @@ public class RushManager {
         return raw;
     }
 
-    private net.kyori.adventure.text.Component getMessageComponent(String key, String defaultValue, Map<String, String> placeholders) {
+    private Component getMessageComponent(String key, String defaultValue, Map<String, String> placeholders) {
         String raw = formatMessage(key, defaultValue, placeholders);
         return MiniMessage.miniMessage().deserialize(raw);
     }
@@ -647,30 +649,36 @@ public class RushManager {
 
         if (Bukkit.getServer() != null) {
             for (String line : lines) {
-                Bukkit.getServer().broadcast(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line));
+                Bukkit.getServer().broadcast(MiniMessage.miniMessage().deserialize(line));
             }
         }
     }
 
-    public void printRushInfo(org.bukkit.command.CommandSender sender) {
-        if (!state.isDailyPlanned()) {
-            sender.sendMessage("§c[Rush] Aucun Rush planifié ou en cours.");
+    public void printRushInfo(CommandSender sender) {
+        if (plugin == null || plugin.getMessageManager() == null) {
             return;
         }
-        sender.sendMessage("§b--- Informations sur le Rush ---");
-        sender.sendMessage("§fRessource : §a" + state.getDailyResource());
-        sender.sendMessage("§fDurée : §e" + state.getDurationMinutes() + " minutes");
-        sender.sendMessage("§fStatut : §e" + (state.isRushActive() ? "En cours" : "Attente de démarrage"));
-        sender.sendMessage("§fNombre d'inscrits : §e" + getRegisteredPlayersCount());
+        if (!state.isDailyPlanned()) {
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-no-active", "<red>[Rush] Aucun Rush planifié ou en cours.</red>"));
+            return;
+        }
+        sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-header", "<blue>--- Informations sur le Rush ---</blue>"));
+        sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-resource", "<white>Ressource : <green>%resource%</green></white>", Map.of("%resource%", state.getDailyResource())));
+        sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-duration", "<white>Durée : <yellow>%duration% minutes</yellow></white>", Map.of("%duration%", String.valueOf(state.getDurationMinutes()))));
+        sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-status", "<white>Statut : <yellow>%status%</yellow></white>", Map.of("%status%", state.isRushActive() ? "En cours" : "Attente de démarrage")));
+        sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-registered-count", "<white>Nombre d'inscrits : <yellow>%count%</yellow></white>", Map.of("%count%", String.valueOf(getRegisteredPlayersCount()))));
 
         if (getRegisteredPlayersCount() > 0) {
-            sender.sendMessage("§fScores des inscrits :");
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-scores-header", "<white>Scores des inscrits :</white>"));
             Map<UUID, Double> scores = state.getRegisteredScores();
             scores.entrySet().stream()
                 .sorted((e1, e2) -> Double.compare(e2.getValue(), e1.getValue()))
                 .forEach(e -> {
                     String name = Bukkit.getOfflinePlayer(e.getKey()).getName();
-                    sender.sendMessage("§f - " + (name != null ? name : e.getKey().toString()) + " : §a" + String.format("%.0f", e.getValue()) + " pts");
+                    String nameStr = name != null ? name : e.getKey().toString();
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-score-line",
+                            " - <white>%player%</white> : <green>%score% pts</green>",
+                            Map.of("%player%", nameStr, "%score%", String.format("%.0f", e.getValue()))));
                 });
         }
     }

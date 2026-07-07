@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -194,7 +195,7 @@ public class QuotaServiceTest {
         PlayerProfile profile = PlayerProfileBuilder.aProfile().name("PlayerOffline").rank(21).elo(25).build();
         
         Instant ref = LocalDateTime.of(2026, 7, 3, 4, 0)
-                .atZone(java.time.ZoneId.systemDefault())
+                .atZone(ZoneId.systemDefault())
                 .toInstant();
         profile.setLastReset(ref);
         progressTracker.resetQuotaProgress(profile, 1);
@@ -231,7 +232,7 @@ public class QuotaServiceTest {
         assertEquals(240, profile.getElo());
 
         Instant ref = LocalDateTime.of(2026, 7, 3, 4, 0)
-                .atZone(java.time.ZoneId.systemDefault())
+                .atZone(ZoneId.systemDefault())
                 .toInstant();
         profile.setLastReset(ref);
         progressTracker.resetQuotaProgress(profile, 1);

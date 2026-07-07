@@ -106,7 +106,19 @@ public class MessageManager {
         return MiniMessage.miniMessage().deserialize(raw);
     }
 
+    public Component getMessageComponent(String key, String defaultValue, Map<String, String> placeholders) {
+        String raw = messages.get(key);
+        if (raw == null) {
+            raw = defaultValue;
+        }
+        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+            raw = raw.replace(entry.getKey(), entry.getValue());
+        }
+        return MiniMessage.miniMessage().deserialize(raw);
+    }
+
     public Component getMessageComponent(String key) {
         return getMessageComponent(key, "");
     }
 }
+

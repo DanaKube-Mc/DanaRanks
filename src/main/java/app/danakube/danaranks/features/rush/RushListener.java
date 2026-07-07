@@ -5,6 +5,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -25,7 +26,7 @@ public class RushListener implements Listener {
 
         plugin.getProfileCache().getProfile(player.getUniqueId()).ifPresent(profile -> {
             rushManager.checkOfflineSummary(profile, msg -> 
-                player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(msg))
+                player.sendMessage(MiniMessage.miniMessage().deserialize(msg))
             );
         });
 

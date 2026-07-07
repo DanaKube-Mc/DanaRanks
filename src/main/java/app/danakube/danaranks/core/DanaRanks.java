@@ -22,10 +22,18 @@ import app.danakube.danaranks.tracker.TrackerRegistry;
 import app.danakube.danaranks.tracker.VanillaXpTracker;
 
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import app.danakube.danaranks.ui.shared.PaperCommandWrapper;
+import app.danakube.danaranks.ui.shared.MenuFactory;
+import app.danakube.danaranks.features.leaderboard.LeaderboardManager;
+import app.danakube.danaranks.admin.AdminCommandExecutor;
+import app.danakube.danaranks.admin.AdminTabCompleter;
+import app.danakube.danaranks.core.profile.ProfileCommand;
+import app.danakube.danaranks.features.quota.QuotaCommand;
+import app.danakube.danaranks.features.leaderboard.LeaderboardCommand;
 import java.util.List;
 
 public final class DanaRanks extends JavaPlugin {
@@ -42,8 +50,8 @@ public final class DanaRanks extends JavaPlugin {
     private TrackerRegistry trackerRegistry;
     private MessageManager messageManager;
     private FileConfiguration guiConfig;
-    private app.danakube.danaranks.ui.shared.MenuFactory menuFactory;
-    private app.danakube.danaranks.features.leaderboard.LeaderboardManager leaderboardManager;
+    private MenuFactory menuFactory;
+    private LeaderboardManager leaderboardManager;
 
     public static DanaRanks getInstance() {
         return instance;
@@ -64,9 +72,9 @@ public final class DanaRanks extends JavaPlugin {
         
         saveResource("gui.yml", false);
         File guiFile = new File(getDataFolder(), "gui.yml");
-        guiConfig = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(guiFile);
+        guiConfig = YamlConfiguration.loadConfiguration(guiFile);
 
-        menuFactory = new app.danakube.danaranks.ui.shared.MenuFactory(this);
+        menuFactory = new MenuFactory(this);
 
         String dbType = config.getString("database.type", "SQLITE");
         if (dbType.equalsIgnoreCase("MYSQL")) {
@@ -86,7 +94,7 @@ public final class DanaRanks extends JavaPlugin {
         profileRepository = new ProfileRepository(databaseManager);
         historyRepository = new HistoryRepository(databaseManager);
 
-        leaderboardManager = new app.danakube.danaranks.features.leaderboard.LeaderboardManager(profileRepository);
+        leaderboardManager = new LeaderboardManager(profileRepository);
         leaderboardManager.updateLeaderboard();
         getServer().getPluginManager().registerEvents(leaderboardManager, this);
 
@@ -135,12 +143,12 @@ public final class DanaRanks extends JavaPlugin {
                 "Commande d'administration principale de DanaRanks",
                 "/danaranks admin",
                 List.of("ranks", "dr"),
-                new app.danakube.danaranks.admin.AdminCommandExecutor(this),
-                new app.danakube.danaranks.admin.AdminTabCompleter()
+                new AdminCommandExecutor(this),
+                new AdminTabCompleter()
         ));
 
         // Enregistrement de la commande joueur /profile
-        app.danakube.danaranks.core.profile.ProfileCommand profileCmd = new app.danakube.danaranks.core.profile.ProfileCommand(this);
+        ProfileCommand profileCmd = new ProfileCommand(this);
         getServer().getCommandMap().register("danaranks", new PaperCommandWrapper(
                 "profile",
                 "Affiche votre profil de rangs",
@@ -156,7 +164,7 @@ public final class DanaRanks extends JavaPlugin {
                 "Affiche vos objectifs de quota",
                 "/quota",
                 List.of(),
-                new app.danakube.danaranks.features.quota.QuotaCommand(this),
+                new QuotaCommand(this),
                 null
         ));
 
@@ -166,7 +174,7 @@ public final class DanaRanks extends JavaPlugin {
                 "Affiche le classement global",
                 "/leaderboard",
                 List.of("ranksmap", "topranks", "rankstop"),
-                new app.danakube.danaranks.features.leaderboard.LeaderboardCommand(this),
+                new LeaderboardCommand(this),
                 null
         ));
 
@@ -236,16 +244,16 @@ public final class DanaRanks extends JavaPlugin {
         return guiConfig;
     }
 
-    public app.danakube.danaranks.ui.shared.MenuFactory getMenuFactory() {
+    public MenuFactory getMenuFactory() {
         return menuFactory;
     }
 
-    public app.danakube.danaranks.features.leaderboard.LeaderboardManager getLeaderboardManager() {
+    public LeaderboardManager getLeaderboardManager() {
         return leaderboardManager;
     }
 
     public void reloadGuiConfig() {
         File guiFile = new File(getDataFolder(), "gui.yml");
-        guiConfig = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(guiFile);
+        guiConfig = YamlConfiguration.loadConfiguration(guiFile);
     }
 }
