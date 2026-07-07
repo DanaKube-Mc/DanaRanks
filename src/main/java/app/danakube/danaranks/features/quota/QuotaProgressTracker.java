@@ -99,7 +99,6 @@ public class QuotaProgressTracker {
                             progressData.put("announced_milestones", announcedMap);
                         }
 
-                        @SuppressWarnings("unchecked")
                         java.util.List<Integer> announcedList = (java.util.List<Integer>) announcedMap.computeIfAbsent(normalized, k -> new java.util.ArrayList<Integer>());
 
                         for (int milestone : milestones) {

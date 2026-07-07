@@ -17,6 +17,13 @@ luckperms:
   # Nom de la piste (track) de promotion configurée dans LuckPerms
   track-name: "danaranks"
 
+# Protection anti-cheat / anti-abus (exclure les transactions entre joueurs de l'économie)
+anti-abuse:
+  # Exclure les gains/pertes d'argent venant de ces plugins (QuickShop, AxTrade, etc.)
+  blocked-plugin-packages:
+    - "quickshop"
+    - "axtrade"
+
 # Configuration des resets globaux
 reset:
   # Heure du reset (de 0 à 23)

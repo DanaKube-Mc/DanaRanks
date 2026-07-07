@@ -27,6 +27,19 @@ public class VanillaXpTracker implements ResourceTracker {
         Player player = event.getPlayer();
         if (player == null) return;
 
+        // Anti-Abus / Anti-Cheat (Filtrage QuickShop, AxTrade...)
+        java.util.List<String> blocked = plugin.getConfig().getStringList("anti-abuse.blocked-plugin-packages");
+        if (blocked != null) {
+            for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
+                String className = element.getClassName().toLowerCase();
+                for (String pkg : blocked) {
+                    if (className.contains(pkg.toLowerCase())) {
+                        return; // Ignorer la transaction
+                    }
+                }
+            }
+        }
+
         double amount = event.getAmount();
         if (amount <= 0) return;
 
@@ -44,6 +57,19 @@ public class VanillaXpTracker implements ResourceTracker {
 
         Player player = event.getPlayer();
         if (player == null) return;
+
+        // Anti-Abus / Anti-Cheat (Filtrage QuickShop, AxTrade...)
+        java.util.List<String> blocked = plugin.getConfig().getStringList("anti-abuse.blocked-plugin-packages");
+        if (blocked != null) {
+            for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
+                String className = element.getClassName().toLowerCase();
+                for (String pkg : blocked) {
+                    if (className.contains(pkg.toLowerCase())) {
+                        return; // Ignorer la transaction
+                    }
+                }
+            }
+        }
 
         int oldLevel = event.getOldLevel();
         int newLevel = event.getNewLevel();
