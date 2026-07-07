@@ -16,9 +16,15 @@ menus:
         lore:
           - "<gray>Temps restant avant le reset :"
           - "<yellow>%time_remaining%"
+      profile-button:
+        material: "BARRIER"
+        slot: 18
+        name: "<red>Retour au Profil"
+        lore:
+          - "<gray>Cliquez pour retourner à votre profil."
       border:
         material: "GRAY_STAINED_GLASS_PANE"
-        slots: [0, 1, 2, 3, 5, 6, 7, 8, 9, 17, 18, 19, 20, 21, 23, 24, 25, 26]
+        slots: [0, 1, 2, 3, 5, 6, 7, 8, 9, 17, 19, 20, 21, 23, 24, 25, 26]
 
   profile:
     title: "<dark_gray>Profil de %player%"
@@ -49,6 +55,13 @@ menus:
         name: "<gold>Classement Global"
         lore:
           - "<gray>Cliquez pour ouvrir le classement global."
+      quota-button:
+        material: "CHEST"
+        slot: 32
+        name: "<green>Vos Quotas"
+        lore:
+          - "<gray>Cliquez pour voir vos objectifs"
+          - "<gray>et votre progression de quota."
       border:
         material: "GRAY_STAINED_GLASS_PANE"
         slots: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 17, 27, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44]
@@ -63,9 +76,45 @@ menus:
         name: "<red>Retour au Profil"
         lore:
           - "<gray>Cliquez pour retourner à votre profil."
+      filter-global:
+        material: "NETHER_STAR"
+        slot: 45
+        name: "<gold>Filtre : Global"
+        lore:
+          - "<gray>Cliquez pour afficher le top global."
+      filter-lvl1:
+        material: "COAL"
+        slot: 46
+        name: "<gray>Filtre : Niveau 1 (Rangs 1-10)"
+        lore:
+          - "<gray>Cliquez pour afficher le classement du Niveau 1."
+      filter-lvl2:
+        material: "IRON_INGOT"
+        slot: 47
+        name: "<white>Filtre : Niveau 2 (Rangs 11-20)"
+        lore:
+          - "<gray>Cliquez pour afficher le classement du Niveau 2."
+      filter-lvl3:
+        material: "COPPER_INGOT"
+        slot: 48
+        name: "<gold>Filtre : Niveau 3 (Rangs 21-30)"
+        lore:
+          - "<gray>Cliquez pour afficher le classement du Niveau 3."
+      filter-lvl4:
+        material: "GOLD_INGOT"
+        slot: 50
+        name: "<yellow>Filtre : Niveau 4 (Rangs 31-40)"
+        lore:
+          - "<gray>Cliquez pour afficher le classement du Niveau 4."
+      filter-lvl5:
+        material: "DIAMOND"
+        slot: 51
+        name: "<aqua>Filtre : Niveau 5 (Rangs 41-50)"
+        lore:
+          - "<gray>Cliquez pour afficher le classement du Niveau 5."
       border:
         material: "GRAY_STAINED_GLASS_PANE"
-        slots: [45, 46, 47, 48, 50, 51, 52, 53]
+        slots: [52, 53]
 
   history:
     title: "<dark_gray>Historique d'ELO de %player% (Page %page%)"

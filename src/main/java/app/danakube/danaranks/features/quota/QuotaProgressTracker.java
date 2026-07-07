@@ -69,7 +69,60 @@ public class QuotaProgressTracker {
         progressMap.put(normalized, newValue);
 
         checkBaseEloReward(profile, quotaConfig, normalized, newValue);
+
+        // Annonces de progression de quota
+        if (org.bukkit.Bukkit.getServer() != null) {
+            org.bukkit.entity.Player onlinePlayer = org.bukkit.Bukkit.getPlayer(profile.getUuid());
+            if (onlinePlayer != null) {
+                try {
+                app.danakube.danaranks.core.DanaRanks plugin = org.bukkit.plugin.java.JavaPlugin.getPlugin(app.danakube.danaranks.core.DanaRanks.class);
+                if (plugin != null) {
+                    org.bukkit.configuration.file.FileConfiguration config = plugin.getConfig();
+                    java.util.List<Integer> milestones = config.getIntegerList("quotas-settings.announce-milestones");
+                    if (milestones == null || milestones.isEmpty()) {
+                        milestones = java.util.List.of(50, 100);
+                    }
+
+                    int activeRank = getActiveQuotaRank(profile);
+                    ObjectiveConfig obj = QuotaConfigLoader.getObjectiveConfig(quotaConfig, activeRank, normalized);
+                    if (obj != null) {
+                        double target = obj.target();
+                        double oldVal = current;
+
+                        Map<String, Object> progressData = profile.getQuotaProgress();
+                        Map<String, Object> announcedMap;
+                        Object announcedObj = progressData.get("announced_milestones");
+                        if (announcedObj instanceof Map) {
+                            announcedMap = (Map<String, Object>) announcedObj;
+                        } else {
+                            announcedMap = new HashMap<>();
+                            progressData.put("announced_milestones", announcedMap);
+                        }
+
+                        @SuppressWarnings("unchecked")
+                        java.util.List<Integer> announcedList = (java.util.List<Integer>) announcedMap.computeIfAbsent(normalized, k -> new java.util.ArrayList<Integer>());
+
+                        for (int milestone : milestones) {
+                            double milestoneTarget = target * (milestone / 100.0);
+                            if (newValue >= milestoneTarget && oldVal < milestoneTarget && !announcedList.contains(milestone)) {
+                                announcedList.add(milestone);
+                                String msg;
+                                if (milestone >= 100) {
+                                    msg = String.format("<green>[Quotas] Objectif %s atteint ! (+%d ELO)</green>", obj.name(), obj.baseElo());
+                                } else {
+                                    msg = String.format("<yellow>[Quotas] Progression : %s à %d%% (%.0f/%.0f)</yellow>", obj.name(), milestone, newValue, target);
+                                }
+                                onlinePlayer.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(msg));
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // S'exécute silencieusement en cas d'absence du plugin (tests)
+            }
+        }
     }
+}
 
     public boolean isBaseRewarded(PlayerProfile profile, String resource) {
         String normalized = resource.replace("-", "_");

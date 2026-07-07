@@ -55,11 +55,58 @@ public class QuotaListener implements Listener {
             );
             player.kick(kickMessage);
         } else {
+            PlayerProfile profile = profileOpt.get();
             Component loadedMessage = plugin.getMessageManager().getMessageComponent(
                     "profile-loaded",
                     "&aVotre profil de rang a été correctement chargé !"
             );
             player.sendMessage(loadedMessage);
+
+            // 1. Résumé ELO du reset quota hors-ligne
+            if (profile.getQuotaProgress().containsKey("quota_pending_summary")) {
+                String summary = (String) profile.getQuotaProgress().remove("quota_pending_summary");
+                boolean isGain = !summary.startsWith("-");
+                String eloColor = isGain ? "green" : "red";
+                String eloSign = isGain ? "+" : "";
+                player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(
+                        String.format("<blue>[Quotas] Vos quotas ont expiré pendant votre absence. Variation d'ELO : <%s>%s%s</%s></blue>",
+                                eloColor, eloSign, summary, eloColor)
+                ));
+            }
+
+            // 2. Affichage des quotas actuels et de leur progression
+            try {
+                int activeRank = plugin.getQuotaService().getProgressTracker().getActiveQuotaRank(profile);
+                java.util.Map<String, ObjectiveConfig> objectives = QuotaConfigLoader.getObjectivesForRank(plugin.getQuotaService().getQuotaConfig(), activeRank);
+                player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(
+                        "<aqua><b>[Quotas] Vos objectifs actuels (Rang " + activeRank + ") :</b></aqua>"
+                ));
+                for (ObjectiveConfig obj : objectives.values()) {
+                    double progress = plugin.getQuotaService().getProgressTracker().getProgress(profile, obj.name());
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(
+                            String.format(" - <yellow>%s : %.0f / %.0f</yellow>", obj.name(), progress, obj.target())
+                    ));
+                }
+            } catch (Exception e) {
+                // Ignore safe fallback
+            }
+
+            // 3. Annonce si un Rush quotidien est planifié aujourd'hui
+            try {
+                app.danakube.danaranks.features.rush.RushManager rm = plugin.getRushManager();
+                if (rm != null && rm.isDailyPlanned()) {
+                    java.time.LocalDateTime start = rm.getStartTime();
+                    if (start != null) {
+                        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
+                        String timeStr = start.format(formatter);
+                        player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(
+                                String.format("<gold>[Rush] Un Rush quotidien est planifié aujourd'hui à <yellow>%s</yellow> ! Ne le manquez pas !</gold>", timeStr)
+                        ));
+                    }
+                }
+            } catch (Exception e) {
+                // Ignore safe fallback
+            }
         }
     }
 

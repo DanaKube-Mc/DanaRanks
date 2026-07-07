@@ -16,11 +16,34 @@ public class LeaderboardCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage("Only players can open the leaderboard GUI.");
+        if (args.length > 0 && args[0].equalsIgnoreCase("chat")) {
+            printTop10(sender);
             return true;
         }
-        new LeaderboardGUI(plugin).open(player);
+
+        if (!(sender instanceof Player player)) {
+            printTop10(sender);
+            return true;
+        }
+
+        new LeaderboardGUI(plugin).open(player, 0);
         return true;
+    }
+
+    private void printTop10(CommandSender sender) {
+        java.util.List<LeaderboardEntry> top = plugin.getLeaderboardManager().getCachedLeaderboard();
+        sender.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<gold><b>Classement Global (Top 10) :</b></gold>"));
+        int count = Math.min(10, top.size());
+        if (count == 0) {
+            sender.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<gray>Aucun joueur dans le classement pour le moment.</gray>"));
+            return;
+        }
+        for (int i = 0; i < count; i++) {
+            LeaderboardEntry entry = top.get(i);
+            sender.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(
+                    String.format("<yellow>#%d</yellow> <white>%s</white> - <gold>Rang %d (%d ELO)</gold>",
+                            i + 1, entry.playerName(), entry.rankLevel(), entry.elo())
+            ));
+        }
     }
 }

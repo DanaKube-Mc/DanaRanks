@@ -88,9 +88,13 @@ public final class DanaRanks extends JavaPlugin {
 
         leaderboardManager = new app.danakube.danaranks.features.leaderboard.LeaderboardManager(profileRepository);
         leaderboardManager.updateLeaderboard();
+        getServer().getPluginManager().registerEvents(leaderboardManager, this);
+
+        int updateInterval = config.getInt("leaderboard.update-interval", 5);
+        long ticks = Math.max(1, updateInterval) * 1200L;
         getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
             leaderboardManager.updateLeaderboard();
-        }, 1200L, 6000L);
+        }, ticks, ticks);
 
         String trackName = config.getString("luckperms.track-name", "danaranks");
         if (getServer().getPluginManager().isPluginEnabled("LuckPerms")) {

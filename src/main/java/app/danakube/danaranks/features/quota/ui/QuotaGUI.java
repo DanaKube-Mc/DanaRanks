@@ -73,6 +73,18 @@ public class QuotaGUI {
             inv.setItem(clockSlot, clockItem);
         }
 
+        // Bouton retour profile (Slot 18 par défaut)
+        int profileButtonSlot = config.getInt("menus.quota.items.profile-button.slot", 18);
+        Material profileButtonMat = Material.matchMaterial(config.getString("menus.quota.items.profile-button.material", "BARRIER"));
+        if (profileButtonMat == null) profileButtonMat = Material.BARRIER;
+        String profileButtonName = config.getString("menus.quota.items.profile-button.name", "<red>Retour au Profil");
+        List<String> profileButtonLore = config.getStringList("menus.quota.items.profile-button.lore");
+        ItemStack profileButtonItem = MenuFactory.createItem(profileButtonMat, profileButtonName, profileButtonLore);
+        if (profileButtonSlot >= 0 && profileButtonSlot < size) {
+            inv.setItem(profileButtonSlot, profileButtonItem);
+            holder.setAction(profileButtonSlot, event -> new app.danakube.danaranks.core.profile.ui.ProfileGUI(plugin).open(player));
+        }
+
         int activeRank = plugin.getQuotaService().getProgressTracker().getActiveQuotaRank(profile);
         Map<String, ObjectiveConfig> objectives = QuotaConfigLoader.getObjectivesForRank(plugin.getQuotaService().getQuotaConfig(), activeRank);
 
@@ -83,7 +95,7 @@ public class QuotaGUI {
 
         int currentSlot = 0;
         for (ObjectiveConfig obj : objectives.values()) {
-            while (currentSlot < size && (borderSlots.contains(currentSlot) || currentSlot == clockSlot)) {
+            while (currentSlot < size && (borderSlots.contains(currentSlot) || currentSlot == clockSlot || currentSlot == profileButtonSlot)) {
                 currentSlot++;
             }
             if (currentSlot >= size) break;

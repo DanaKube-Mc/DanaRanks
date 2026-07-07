@@ -20,10 +20,17 @@ public class LeaderboardGUI {
     }
 
     public void open(Player player) {
+        open(player, 0);
+    }
+
+    public void open(Player player, int filterLevel) {
         FileConfiguration config = plugin.getGuiConfig();
         if (config == null) return;
 
         String title = config.getString("menus.leaderboard.title", "Classement Global (Top 50)");
+        if (filterLevel > 0) {
+            title = title + " - Niveau " + filterLevel;
+        }
         int size = config.getInt("menus.leaderboard.size", 54);
 
         MenuFactory.CustomHolder holder = new MenuFactory.CustomHolder();
@@ -54,18 +61,37 @@ public class LeaderboardGUI {
             holder.setAction(backSlot, event -> new ProfileGUI(plugin).open(player));
         }
 
-        // 3. Liste des entrées (Top 50)
+        // 2b. Boutons de filtres
+        setupFilterButton(inv, holder, player, config, "filter-global", 0, filterLevel);
+        setupFilterButton(inv, holder, player, config, "filter-lvl1", 1, filterLevel);
+        setupFilterButton(inv, holder, player, config, "filter-lvl2", 2, filterLevel);
+        setupFilterButton(inv, holder, player, config, "filter-lvl3", 3, filterLevel);
+        setupFilterButton(inv, holder, player, config, "filter-lvl4", 4, filterLevel);
+        setupFilterButton(inv, holder, player, config, "filter-lvl5", 5, filterLevel);
+
+        // 3. Liste des entrées (Top 50 filtré)
         List<LeaderboardEntry> top = plugin.getLeaderboardManager() != null ? plugin.getLeaderboardManager().getCachedLeaderboard() : new ArrayList<>();
+        List<LeaderboardEntry> filtered = new ArrayList<>();
+        for (LeaderboardEntry entry : top) {
+            int level = plugin.getQuotaService().getLevelFromRank(entry.rankLevel());
+            if (filterLevel == 0 || level == filterLevel) {
+                filtered.add(entry);
+            }
+        }
+
         int currentSlot = 0;
-        int itemsCount = Math.min(45, top.size()); // Max 45 items (5 lignes de 9)
+        int itemsCount = Math.min(45, filtered.size()); // Max 45 items (5 lignes de 9)
+
+        // Liste des slots de filtre pour éviter de les écraser
+        List<Integer> filterSlots = List.of(45, 46, 47, 48, 50, 51);
 
         for (int i = 0; i < itemsCount; i++) {
-            while (currentSlot < size && borderSlots.contains(currentSlot)) {
+            while (currentSlot < size && (borderSlots.contains(currentSlot) || currentSlot == backSlot || filterSlots.contains(currentSlot))) {
                 currentSlot++;
             }
             if (currentSlot >= size) break;
 
-            LeaderboardEntry entry = top.get(i);
+            LeaderboardEntry entry = filtered.get(i);
             int rankNum = i + 1;
 
             Material mat = Material.PLAYER_HEAD;
@@ -86,5 +112,24 @@ public class LeaderboardGUI {
         }
 
         player.openInventory(inv);
+    }
+
+    private void setupFilterButton(Inventory inv, MenuFactory.CustomHolder holder, Player player, FileConfiguration config, String key, int targetLevel, int activeLevel) {
+        int slot = config.getInt("menus.leaderboard.items." + key + ".slot");
+        Material mat = Material.matchMaterial(config.getString("menus.leaderboard.items." + key + ".material", "PAPER"));
+        if (mat == null) mat = Material.PAPER;
+        String name = config.getString("menus.leaderboard.items." + key + ".name", "Filtre");
+        List<String> lore = new ArrayList<>(config.getStringList("menus.leaderboard.items." + key + ".lore"));
+
+        if (targetLevel == activeLevel) {
+            name = name + " <green>(Actif)</green>";
+            lore.add("<green>Filtre actif</green>");
+        }
+
+        ItemStack item = MenuFactory.createItem(mat, name, lore);
+        if (slot >= 0 && slot < inv.getSize()) {
+            inv.setItem(slot, item);
+            holder.setAction(slot, event -> open(player, targetLevel));
+        }
     }
 }
