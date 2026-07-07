@@ -276,26 +276,20 @@ public class RushManager {
 
     public static boolean isTriggeredByAdminCommand() {
         for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
-            String className = element.getClassName().toLowerCase();
+            String className = element.getClassName();
+            String methodName = element.getMethodName();
 
             if (className.contains("org.junit") || className.contains("org.apache.maven.surefire")) {
                 continue;
             }
-            if (className.contains("admincommandsimulator")) {
+            if (className.contains("AdminCommandSimulator")) {
                 return true;
             }
-            
-            // Mots-clés de commandes et transactions interdits (administration, triche, transferts, shops de joueur, enchères)
-            if (className.contains("admin") ||
-                className.contains("pay") ||
-                className.contains("trade") ||
-                className.contains("give") ||
-                className.contains("grant") ||
-                className.contains("set") ||
-                className.contains("eco") ||
-                className.contains("quickshop") ||
-                className.contains("chestshop") ||
-                className.contains("auction")) {
+            if (className.startsWith("org.bukkit.command.") || 
+                className.startsWith("com.mojang.brigadier.") || 
+                className.contains("CommandDispatcher") || 
+                className.contains("VanillaCommandWrapper") ||
+                (className.equals("org.bukkit.Bukkit") && methodName.equals("dispatchCommand"))) {
                 return true;
             }
         }
