@@ -15,9 +15,14 @@ import org.bukkit.configuration.file.FileConfiguration;
 
 public class QuotaProgressTracker {
     private final EloService eloService;
+    private QuotaService quotaService;
 
     public QuotaProgressTracker(EloService eloService) {
         this.eloService = eloService;
+    }
+
+    public void setQuotaService(QuotaService quotaService) {
+        this.quotaService = quotaService;
     }
 
     public int getActiveQuotaRank(PlayerProfile profile) {
@@ -53,6 +58,12 @@ public class QuotaProgressTracker {
     @SuppressWarnings("unchecked")
     public void incrementProgress(PlayerProfile profile, QuotaConfig quotaConfig, String resource, double amount) {
         String normalized = resource.replace("-", "_");
+
+        Map<String, ObjectiveConfig> active = getActiveObjectives(profile);
+        if (!active.containsKey(normalized)) {
+            return;
+        }
+
         Map<String, Object> quotaProgress = profile.getQuotaProgress();
         Map<String, Double> progressMap;
         Object progressMapObj = quotaProgress.get("progress");
@@ -89,8 +100,7 @@ public class QuotaProgressTracker {
                             milestones = List.of(50, 100);
                         }
 
-                        int activeRank = getActiveQuotaRank(profile);
-                        ObjectiveConfig obj = QuotaConfigLoader.getObjectiveConfig(quotaConfig, activeRank, normalized);
+                        ObjectiveConfig obj = getActiveObjectives(profile).get(normalized);
                         if (obj != null) {
                             double target = obj.target();
                             double oldVal = current;
@@ -166,8 +176,7 @@ public class QuotaProgressTracker {
             return;
         }
 
-        int activeRank = getActiveQuotaRank(profile);
-        ObjectiveConfig obj = QuotaConfigLoader.getObjectiveConfig(quotaConfig, activeRank, normalized);
+        ObjectiveConfig obj = getActiveObjectives(profile).get(normalized);
         if (obj == null) {
             return;
         }
@@ -185,5 +194,106 @@ public class QuotaProgressTracker {
         setActiveQuotaRank(profile, activeRank);
         profile.getQuotaProgress().put("progress", new HashMap<String, Double>());
         profile.getQuotaProgress().put("base_rewarded", new HashMap<String, Boolean>());
+        initializeActiveObjectives(profile, activeRank);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, ObjectiveConfig> getActiveObjectives(PlayerProfile profile) {
+        Map<String, Object> progress = profile.getQuotaProgress();
+        Object activeObj = progress.get("active_objectives");
+        if (activeObj instanceof Map) {
+            Map<String, ObjectiveConfig> result = new HashMap<>();
+            Map<?, ?> map = (Map<?, ?>) activeObj;
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                String name = (String) entry.getKey();
+                Map<?, ?> objData = (Map<?, ?>) entry.getValue();
+
+                double target = ((Number) objData.get("target")).doubleValue();
+                int baseElo = ((Number) objData.get("baseElo")).intValue();
+                int maxSurplusElo = ((Number) objData.get("maxSurplusElo")).intValue();
+                int failPenalty = ((Number) objData.get("failPenalty")).intValue();
+
+                result.put(name, new ObjectiveConfig(name, target, baseElo, maxSurplusElo, failPenalty));
+            }
+            return result;
+        }
+
+        int activeRank = getActiveQuotaRank(profile);
+        initializeActiveObjectives(profile, activeRank);
+        return getActiveObjectives(profile);
+    }
+
+    @SuppressWarnings("unchecked")
+    public void initializeActiveObjectives(PlayerProfile profile, int rank) {
+        QuotaConfig quotaConfig = null;
+        if (quotaService != null) {
+            quotaConfig = quotaService.getQuotaConfig();
+        } else {
+            try {
+                DanaRanks ranksInstance = JavaPlugin.getPlugin(DanaRanks.class);
+                if (ranksInstance != null && ranksInstance.getQuotaService() != null) {
+                    quotaConfig = ranksInstance.getQuotaService().getQuotaConfig();
+                }
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+
+        if (quotaConfig == null) {
+            Map<String, Map<String, Object>> activeMap = new HashMap<>();
+            List<String> names = List.of("lumens_gained", "job_xp_all");
+            for (String name : names) {
+                Map<String, Object> objData = new HashMap<>();
+                objData.put("name", name);
+                objData.put("target", name.equals("lumens_gained") ? 1000.0 : 500.0);
+                objData.put("baseElo", 5);
+                objData.put("maxSurplusElo", 10);
+                objData.put("failPenalty", 0);
+                activeMap.put(name, objData);
+            }
+            profile.getQuotaProgress().put("active_objectives", activeMap);
+            return;
+        }
+
+
+        List<ObjectiveConfig> potential = new ArrayList<>();
+        for (ObjectiveConfig base : quotaConfig.baseObjectives().values()) {
+            double scaledTarget = Math.round(base.target() * Math.pow(quotaConfig.scalingMultiplierPerRank(), rank - 1));
+            potential.add(new ObjectiveConfig(base.name(), scaledTarget, base.baseElo(), base.maxSurplusElo(), base.failPenalty()));
+        }
+
+        int maxObj = quotaConfig.maxObjectives();
+        if (maxObj <= 0) {
+            maxObj = potential.size();
+        }
+
+        List<ObjectiveConfig> selected = new ArrayList<>();
+        if (potential.size() <= maxObj) {
+            selected.addAll(potential);
+        } else {
+            List<ObjectiveConfig> copy = new ArrayList<>(potential);
+            java.util.Collections.shuffle(copy);
+            for (int i = 0; i < maxObj; i++) {
+                selected.add(copy.get(i));
+            }
+        }
+
+        int activeCount = selected.size();
+        int baseEloEach = activeCount > 0 ? (int) Math.round((double) quotaConfig.globalBaseElo() / activeCount) : 0;
+        int maxSurplusEach = activeCount > 0 ? (int) Math.round((double) quotaConfig.globalMaxSurplusElo() / activeCount) : 0;
+        int failPenaltyEach = activeCount > 0 ? (int) Math.round((double) quotaConfig.globalFailPenalty() / activeCount) : 0;
+
+        Map<String, Map<String, Object>> activeMap = new HashMap<>();
+        for (ObjectiveConfig obj : selected) {
+            Map<String, Object> objData = new HashMap<>();
+            objData.put("name", obj.name());
+            objData.put("target", obj.target());
+            objData.put("baseElo", baseEloEach);
+            objData.put("maxSurplusElo", maxSurplusEach);
+            objData.put("failPenalty", failPenaltyEach);
+            activeMap.put(obj.name(), objData);
+        }
+
+        profile.getQuotaProgress().put("active_objectives", activeMap);
     }
 }

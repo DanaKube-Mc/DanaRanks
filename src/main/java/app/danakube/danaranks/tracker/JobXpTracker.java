@@ -16,7 +16,7 @@ public class JobXpTracker implements ResourceTracker {
 
     @Override
     public String getResourceName() {
-        return "job_xp";
+        return "job_xp_all";
     }
 
     @EventHandler
@@ -27,10 +27,20 @@ public class JobXpTracker implements ResourceTracker {
         double amount = event.getReward().get(GrindObjectiveProperty.XP);
         if (amount <= 0) return;
 
+        String jobId = event.getJob().getId().toLowerCase().replace("-", "_");
+
         plugin.getProfileCache().getProfile(player.getUniqueId()).ifPresent(profile -> {
-            plugin.getQuotaService().getProgressTracker().incrementProgress(profile, plugin.getQuotaService().getQuotaConfig(), getResourceName(), amount);
+            // 1. XP de métier global (job-xp-all)
+            plugin.getQuotaService().getProgressTracker().incrementProgress(profile, plugin.getQuotaService().getQuotaConfig(), "job_xp_all", amount);
             if (plugin.getRushManager() != null) {
-                plugin.getRushManager().handleResourceGain(player.getUniqueId(), getResourceName(), amount, Instant.now());
+                plugin.getRushManager().handleResourceGain(player.getUniqueId(), "job_xp_all", amount, Instant.now());
+            }
+
+            // 2. XP de métier spécifique (job-xp-<jobId>)
+            String specific = "job_xp_" + jobId;
+            plugin.getQuotaService().getProgressTracker().incrementProgress(profile, plugin.getQuotaService().getQuotaConfig(), specific, amount);
+            if (plugin.getRushManager() != null) {
+                plugin.getRushManager().handleResourceGain(player.getUniqueId(), specific, amount, Instant.now());
             }
         });
     }

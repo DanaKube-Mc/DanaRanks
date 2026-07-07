@@ -80,7 +80,7 @@ public class QuotaListener implements Listener {
             // 2. Affichage des quotas actuels et de leur progression
             try {
                 int activeRank = plugin.getQuotaService().getProgressTracker().getActiveQuotaRank(profile);
-                Map<String, ObjectiveConfig> objectives = QuotaConfigLoader.getObjectivesForRank(plugin.getQuotaService().getQuotaConfig(), activeRank);
+                Map<String, ObjectiveConfig> objectives = plugin.getQuotaService().getProgressTracker().getActiveObjectives(profile);
                 player.sendMessage(plugin.getMessageManager().getMessageComponent("quota-join-header",
                         "<aqua><b>[Quotas] Vos objectifs actuels (Rang %rank%) :</b></aqua>", Map.of("%rank%", String.valueOf(activeRank))));
                 for (ObjectiveConfig obj : objectives.values()) {

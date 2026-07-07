@@ -17,6 +17,7 @@ public class QuotaService {
     public QuotaService(EloService eloService, QuotaProgressTracker progressTracker) {
         this.eloService = eloService;
         this.progressTracker = progressTracker;
+        this.progressTracker.setQuotaService(this);
         this.quotaConfig = QuotaConfigLoader.load(null, null);
         this.quotaScheduler = new QuotaScheduler(quotaConfig.refDateStr(), quotaConfig.resetHour());
     }
@@ -71,8 +72,7 @@ public class QuotaService {
 
         // Évaluer le PREMIER cycle expiré avec la progression réelle accumulée
         double firstCycleEloChange = 0;
-        int activeRank = progressTracker.getActiveQuotaRank(profile);
-        Map<String, ObjectiveConfig> objectives = QuotaConfigLoader.getObjectivesForRank(quotaConfig, activeRank);
+        Map<String, ObjectiveConfig> objectives = progressTracker.getActiveObjectives(profile);
         for (ObjectiveConfig obj : objectives.values()) {
             double current = progressTracker.getProgress(profile, obj.name());
             double target = obj.target();
@@ -133,7 +133,7 @@ public class QuotaService {
         double totalSurplusElo = 0;
         double totalLossElo = 0;
 
-        Map<String, ObjectiveConfig> objectives = QuotaConfigLoader.getObjectivesForRank(quotaConfig, activeRank);
+        Map<String, ObjectiveConfig> objectives = progressTracker.getActiveObjectives(profile);
         for (ObjectiveConfig obj : objectives.values()) {
             double current = progressTracker.getProgress(profile, obj.name());
             double target = obj.target();
