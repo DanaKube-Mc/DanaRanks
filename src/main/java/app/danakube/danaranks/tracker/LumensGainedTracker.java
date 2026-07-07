@@ -3,7 +3,7 @@ package app.danakube.danaranks.tracker;
 import app.danakube.danaranks.core.DanaRanks;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import su.nightexpress.excellenteconomy.api.events.ChangeBalanceEvent;
+import su.nightexpress.excellenteconomy.api.event.ChangeBalanceEvent;
 
 public class LumensGainedTracker implements ResourceTracker {
     private final DanaRanks plugin;

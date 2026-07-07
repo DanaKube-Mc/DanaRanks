@@ -3,7 +3,8 @@ package app.danakube.danaranks.tracker;
 import app.danakube.danaranks.core.DanaRanks;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import su.nightexpress.excellentjobs.api.events.ExcellentJobXPCheckEvent;
+import su.nightexpress.excellentjobs.api.event.GrindRewardEvent;
+import su.nightexpress.excellentjobs.api.grind.GrindObjectiveProperty;
 
 public class JobXpTracker implements ResourceTracker {
     private final DanaRanks plugin;
@@ -18,11 +19,11 @@ public class JobXpTracker implements ResourceTracker {
     }
 
     @EventHandler
-    public void onJobXpGain(ExcellentJobXPCheckEvent event) {
+    public void onJobXpGain(GrindRewardEvent event) {
         Player player = event.getPlayer();
         if (player == null) return;
 
-        double amount = event.getAmount();
+        double amount = event.getReward().get(GrindObjectiveProperty.XP);
         if (amount <= 0) return;
 
         plugin.getProfileCache().getProfile(player.getUniqueId()).ifPresent(profile -> {

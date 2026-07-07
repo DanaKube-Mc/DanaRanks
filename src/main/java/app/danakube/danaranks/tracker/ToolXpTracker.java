@@ -3,7 +3,7 @@ package app.danakube.danaranks.tracker;
 import app.danakube.danaranks.core.DanaRanks;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import app.danakube.danatools.event.ToolXpGainEvent;
+import com.danakube.danatools.event.ToolXpGainEvent;
 
 public class ToolXpTracker implements ResourceTracker {
     private final DanaRanks plugin;

@@ -133,7 +133,7 @@
                     <excludes>
                         <exclude>su/nightexpress/excellentjobs/**</exclude>
                         <exclude>su/nightexpress/excellenteconomy/**</exclude>
-                        <exclude>app/danakube/danatools/**</exclude>
+                        <exclude>com/danakube/danatools/**</exclude>
                     </excludes>
                 </configuration>
             </plugin>
