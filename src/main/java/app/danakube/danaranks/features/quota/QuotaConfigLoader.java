@@ -18,10 +18,10 @@ public class QuotaConfigLoader {
         Map<String, ObjectiveConfig> baseObjectives = new HashMap<>();
 
         baseObjectives.put("lumens_gained", new ObjectiveConfig("lumens_gained", 1000, 5, 10, 0));
-        baseObjectives.put("job_xp", new ObjectiveConfig("job_xp", 500, 5, 10, 0));
+        baseObjectives.put("job_xp_all", new ObjectiveConfig("job_xp_all", 500, 5, 10, 0));
 
         if (config == null) {
-            return new QuotaConfig(surplusMultiplier, scalingMultiplier, refDateStr, resetHour, baseObjectives);
+            return new QuotaConfig(surplusMultiplier, scalingMultiplier, refDateStr, resetHour, 10, 20, 0, -1, baseObjectives);
         }
 
         int hr = config.getInt("reset.hour", 4);
@@ -61,24 +61,62 @@ public class QuotaConfigLoader {
             scalingMultiplier = scaleMult;
         }
 
+        int globalBaseElo = config.getInt("quotas-settings.base-rank-1.base-elo", -1);
+        int globalMaxSurplusElo = config.getInt("quotas-settings.base-rank-1.max-surplus-elo", -1);
+        int globalFailPenalty = config.getInt("quotas-settings.base-rank-1.fail-penalty", -1);
+        int maxObjectives = config.getInt("quotas-settings.base-rank-1.max-objectives",
+                config.getInt("quotas-settings.base-rank-1.nb-objectifs-max", -1));
+
         if (config.contains("quotas-settings.base-rank-1.objectives")) {
             baseObjectives.clear();
             ConfigurationSection section = config.getConfigurationSection("quotas-settings.base-rank-1.objectives");
             if (section != null) {
+                int sumBaseElo = 0;
+                int sumMaxSurplus = 0;
+                int sumFailPen = 0;
+                boolean hasIndividualElo = false;
+
                 for (String key : section.getKeys(false)) {
                     String path = "quotas-settings.base-rank-1.objectives." + key;
                     double target = config.getDouble(path + ".target", 1000);
-                    int baseElo = config.getInt(path + ".base-elo", 5);
-                    int maxSurplus = config.getInt(path + ".max-surplus-elo", 10);
-                    int failPen = config.getInt(path + ".fail-penalty", 0);
-                    
+                    int baseElo = config.getInt(path + ".base-elo", -1);
+                    int maxSurplus = config.getInt(path + ".max-surplus-elo", -1);
+                    int failPen = config.getInt(path + ".fail-penalty", -1);
+
+                    if (baseElo != -1 || maxSurplus != -1 || failPen != -1) {
+                        hasIndividualElo = true;
+                    }
+
+                    int finalBaseElo = baseElo != -1 ? baseElo : 5;
+                    int finalMaxSurplus = maxSurplus != -1 ? maxSurplus : 10;
+                    int finalFailPen = failPen != -1 ? failPen : 0;
+
+                    sumBaseElo += finalBaseElo;
+                    sumMaxSurplus += finalMaxSurplus;
+                    sumFailPen += finalFailPen;
+
                     String normalizedKey = key.replace("-", "_");
-                    baseObjectives.put(normalizedKey, new ObjectiveConfig(normalizedKey, target, baseElo, maxSurplus, failPen));
+                    baseObjectives.put(normalizedKey, new ObjectiveConfig(normalizedKey, target, finalBaseElo, finalMaxSurplus, finalFailPen));
+                }
+
+                if (globalBaseElo == -1) {
+                    globalBaseElo = hasIndividualElo ? sumBaseElo : 10;
+                }
+                if (globalMaxSurplusElo == -1) {
+                    globalMaxSurplusElo = hasIndividualElo ? sumMaxSurplus : 20;
+                }
+                if (globalFailPenalty == -1) {
+                    globalFailPenalty = hasIndividualElo ? sumFailPen : 0;
                 }
             }
+        } else {
+            if (globalBaseElo == -1) globalBaseElo = 10;
+            if (globalMaxSurplusElo == -1) globalMaxSurplusElo = 20;
+            if (globalFailPenalty == -1) globalFailPenalty = 0;
         }
 
-        return new QuotaConfig(surplusMultiplier, scalingMultiplier, refDateStr, resetHour, baseObjectives);
+        return new QuotaConfig(surplusMultiplier, scalingMultiplier, refDateStr, resetHour,
+                globalBaseElo, globalMaxSurplusElo, globalFailPenalty, maxObjectives, baseObjectives);
     }
 
     public static Map<String, ObjectiveConfig> getObjectivesForRank(QuotaConfig quotaConfig, int rank) {

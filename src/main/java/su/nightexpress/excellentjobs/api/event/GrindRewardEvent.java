@@ -6,13 +6,15 @@ import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 import su.nightexpress.excellentjobs.api.grind.GrindReward;
 
+import su.nightexpress.excellentjobs.job.model.Job;
+
 public class GrindRewardEvent extends GrindObjectiveEvent implements Cancellable {
     private static final HandlerList handlers = new HandlerList();
     private final GrindReward reward;
     private boolean cancelled;
 
-    public GrindRewardEvent(Player player, GrindReward reward) {
-        super(player);
+    public GrindRewardEvent(Player player, Job job, GrindReward reward) {
+        super(player, job);
         this.reward = reward;
     }
 

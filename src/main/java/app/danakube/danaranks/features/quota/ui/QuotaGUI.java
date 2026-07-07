@@ -86,8 +86,7 @@ public class QuotaGUI {
             holder.setAction(profileButtonSlot, event -> new ProfileGUI(plugin).open(player));
         }
 
-        int activeRank = plugin.getQuotaService().getProgressTracker().getActiveQuotaRank(profile);
-        Map<String, ObjectiveConfig> objectives = QuotaConfigLoader.getObjectivesForRank(plugin.getQuotaService().getQuotaConfig(), activeRank);
+        Map<String, ObjectiveConfig> objectives = plugin.getQuotaService().getProgressTracker().getActiveObjectives(profile);
 
         String format = config.getString("menus.quota.objectives.format", "<yellow>%resource% : <gray>%bar% %progress%/%target% (<gold>%percentage%</gold>)");
         String barSymbolFilled = config.getString("menus.quota.objectives.bar-symbol-filled", "█");

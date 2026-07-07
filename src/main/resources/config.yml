@@ -35,25 +35,26 @@ reset:
 # Paramètres généraux des quotas
 quotas-settings:
   # Multiplicateur pour atteindre le surplus maximum ELO (ex: 10.0 pour un surplus max à 10x la cible)
-  surplus-multiplier: 10.0
+  surplus-multiplier: 5.8
   # Liste des pourcentages de progression de quota à annoncer dans le chat
   announce-milestones: [50, 100]
   # Paramètres de croissance par défaut (formule de scaling)
   scaling:
-    multiplier-per-rank: 1.15 # +15% de quantité par rang
+    multiplier-per-rank: 1.22 # +22% de quantité par rang
   # Quota de base pour le Rang 1 (Fer I, Période = 1 jour, pas de pénalité donc fail-penalty = 0)
   base-rank-1:
+    # Paramètres ELO globaux et nombre d'objectifs max pour ce rang
+    base-elo: 10
+    max-surplus-elo: 20
+    fail-penalty: 0
+    max-objectives: 2
+
+    # Liste de tous les objectifs disponibles pour ce rang
     objectives:
       lumens-gained:
         target: 1000
-        base-elo: 5
-        max-surplus-elo: 10
-        fail-penalty: 0
-      job-xp:
+      job-xp-all:
         target: 500
-        base-elo: 5
-        max-surplus-elo: 10
-        fail-penalty: 0
 
 # Configuration du Rush Quotidien
 rush:
@@ -80,7 +81,7 @@ rush:
   eligible-resources:
     - "lumens-gained"
     - "lumens-spent"
-    - "job-xp"
+    - "job-xp-all"
     - "tool-xp"
     - "vanilla-xp-gained"
     - "vanilla-xp-spent"

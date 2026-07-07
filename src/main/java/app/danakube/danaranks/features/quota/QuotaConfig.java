@@ -7,5 +7,9 @@ public record QuotaConfig(
     double scalingMultiplierPerRank,
     String refDateStr,
     int resetHour,
+    int globalBaseElo,
+    int globalMaxSurplusElo,
+    int globalFailPenalty,
+    int maxObjectives,
     Map<String, ObjectiveConfig> baseObjectives
 ) {}
