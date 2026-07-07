@@ -65,21 +65,65 @@ public class QuotaService {
             return;
         }
 
-        if (level >= 3) {
-            int activeRank = progressTracker.getActiveQuotaRank(profile);
-            for (int i = 0; i < missedCycles; i++) {
-                double penalty = getCycleFailurePenalty(activeRank);
+        int startElo = profile.getElo();
+        int startRank = profile.getRankLevel();
+        int startCumulative = (startRank - 1) * 100 + startElo;
+
+        // Évaluer le PREMIER cycle expiré avec la progression réelle accumulée
+        double firstCycleEloChange = 0;
+        int activeRank = progressTracker.getActiveQuotaRank(profile);
+        Map<String, ObjectiveConfig> objectives = QuotaConfigLoader.getObjectivesForRank(quotaConfig, activeRank);
+        for (ObjectiveConfig obj : objectives.values()) {
+            double current = progressTracker.getProgress(profile, obj.name());
+            double target = obj.target();
+            if (current >= target) {
+                if (obj.maxSurplusElo() > obj.baseElo()) {
+                    double diff = current - target;
+                    double maxDiff = target * (quotaConfig.surplusMultiplier() - 1.0);
+                    double fraction = maxDiff > 0 ? Math.min(1.0, diff / maxDiff) : 0;
+                    double surplus = fraction * (obj.maxSurplusElo() - obj.baseElo());
+                    firstCycleEloChange += surplus;
+                }
+            } else {
+                if (level >= 3 && obj.failPenalty() > 0) {
+                    double fractionMissing = (target - current) / target;
+                    double loss = Math.round(fractionMissing * obj.failPenalty());
+                    firstCycleEloChange -= loss;
+                }
+            }
+        }
+
+        int firstCycleEloChangeInt = (int) Math.round(firstCycleEloChange);
+        if (firstCycleEloChangeInt != 0 && eloService != null) {
+            eloService.addElo(profile, firstCycleEloChangeInt, firstCycleEloChangeInt > 0 ? "QUOTA_SURPLUS" : "QUOTA_FAILURE");
+        }
+
+        // Appliquer la pénalité de déchéance complète pour les cycles manqués SUIVANTS (car 0 progression)
+        if (level >= 3 && missedCycles > 1) {
+            int nextActiveRank = profile.getRankLevel();
+            for (int i = 1; i < missedCycles; i++) {
+                double penalty = getCycleFailurePenalty(nextActiveRank);
                 int penaltyInt = (int) Math.round(penalty);
                 if (penaltyInt > 0 && eloService != null) {
                     eloService.addElo(profile, -penaltyInt, "QUOTA_DECAY");
                 }
-                activeRank = profile.getRankLevel();
+                nextActiveRank = profile.getRankLevel();
             }
         }
 
         progressTracker.resetQuotaProgress(profile, profile.getRankLevel());
         Instant lastResetEffective = quotaScheduler.getLastResetEffectiveInstant(level, now);
         profile.setLastReset(lastResetEffective);
+
+        int endElo = profile.getElo();
+        int endRank = profile.getRankLevel();
+        int endCumulative = (endRank - 1) * 100 + endElo;
+        int netEloChange = endCumulative - startCumulative;
+
+        if (netEloChange != 0) {
+            String sign = netEloChange > 0 ? "+" : "";
+            profile.getQuotaProgress().put("quota_pending_summary", sign + netEloChange + " ELO");
+        }
     }
 
     public void processGlobalReset(PlayerProfile profile, Instant now) {

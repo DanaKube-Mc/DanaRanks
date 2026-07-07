@@ -136,7 +136,19 @@ public class ProfileGUI {
         ItemStack leaderboardItem = MenuFactory.createItem(leaderboardMat, leaderboardName, leaderboardLore);
         if (leaderboardSlot >= 0 && leaderboardSlot < size) {
             inv.setItem(leaderboardSlot, leaderboardItem);
-            holder.setAction(leaderboardSlot, event -> new LeaderboardGUI(plugin).open(player));
+            holder.setAction(leaderboardSlot, event -> new LeaderboardGUI(plugin).open(player, 0));
+        }
+
+        // 7. Bouton Quota (Slot 32)
+        int quotaSlot = config.getInt("menus.profile.items.quota-button.slot", 32);
+        Material quotaMat = Material.matchMaterial(config.getString("menus.profile.items.quota-button.material", "CHEST"));
+        if (quotaMat == null) quotaMat = Material.CHEST;
+        String quotaName = config.getString("menus.profile.items.quota-button.name", "<green>Vos Quotas");
+        List<String> quotaLore = config.getStringList("menus.profile.items.quota-button.lore");
+        ItemStack quotaItem = MenuFactory.createItem(quotaMat, quotaName, quotaLore);
+        if (quotaSlot >= 0 && quotaSlot < size) {
+            inv.setItem(quotaSlot, quotaItem);
+            holder.setAction(quotaSlot, event -> new app.danakube.danaranks.features.quota.ui.QuotaGUI(plugin).open(player));
         }
 
         player.openInventory(inv);

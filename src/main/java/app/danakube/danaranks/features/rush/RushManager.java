@@ -276,20 +276,26 @@ public class RushManager {
 
     public static boolean isTriggeredByAdminCommand() {
         for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
-            String className = element.getClassName();
-            String methodName = element.getMethodName();
+            String className = element.getClassName().toLowerCase();
 
             if (className.contains("org.junit") || className.contains("org.apache.maven.surefire")) {
                 continue;
             }
-            if (className.contains("AdminCommandSimulator")) {
+            if (className.contains("admincommandsimulator")) {
                 return true;
             }
-            if (className.startsWith("org.bukkit.command.") || 
-                className.startsWith("com.mojang.brigadier.") || 
-                className.contains("CommandDispatcher") || 
-                className.contains("VanillaCommandWrapper") ||
-                (className.equals("org.bukkit.Bukkit") && methodName.equals("dispatchCommand"))) {
+            
+            // Mots-clés de commandes et transactions interdits (administration, triche, transferts, shops de joueur, enchères)
+            if (className.contains("admin") ||
+                className.contains("pay") ||
+                className.contains("trade") ||
+                className.contains("give") ||
+                className.contains("grant") ||
+                className.contains("set") ||
+                className.contains("eco") ||
+                className.contains("quickshop") ||
+                className.contains("chestshop") ||
+                className.contains("auction")) {
                 return true;
             }
         }
@@ -451,11 +457,17 @@ public class RushManager {
             // Ignore in tests
         }
 
-        return applyAndSaveEloChanges(profiles, eloChanges);
+        return applyAndSaveEloChanges(profiles, eloChanges, scores);
     }
 
-    private CompletableFuture<Void> applyAndSaveEloChanges(List<PlayerProfile> profiles, Map<UUID, Integer> eloChanges) {
+    private CompletableFuture<Void> applyAndSaveEloChanges(List<PlayerProfile> profiles, Map<UUID, Integer> eloChanges, Map<UUID, Double> scores) {
         List<CompletableFuture<Void>> dbFutures = new ArrayList<>();
+
+        try {
+            broadcastRushSummary(profiles, eloChanges, scores);
+        } catch (Exception e) {
+            // Ignorer silencieusement
+        }
 
         for (PlayerProfile profile : profiles) {
             int change = eloChanges.getOrDefault(profile.getUuid(), 0);
@@ -570,5 +582,102 @@ public class RushManager {
         visualManager.clearAllActiveBars();
         visualManager.hideAnnounceBar();
         setupDaily(LocalDateTime.now());
+    }
+
+    public void forceScheduleRush(String resource, int durationMinutes, int delayMinutes) {
+        LocalDateTime start = LocalDateTime.now().plusMinutes(delayMinutes);
+        state.setDailyPlanned(true);
+        state.setLastPlannedDate(start.toLocalDate());
+        state.setDailyResource(resource);
+        state.setDurationMinutes(durationMinutes);
+        state.setStartTime(start);
+        state.setRushActive(false);
+        state.setDiscordAnnounced(false);
+        scoreTracker.clear();
+
+        visualManager.hideAnnounceBar();
+        visualManager.clearAllActiveBars();
+
+        sendDiscordWebhook(formatMessage("rush-discord-scheduled-admin",
+                "[Rush] Un administrateur a planifié un Rush sur la ressource %resource% qui commencera dans %delay% minutes !",
+                Map.of("%resource%", resource, "%delay%", String.valueOf(delayMinutes))));
+
+        Bukkit.broadcast(getMessageComponent("rush-scheduled-admin",
+                "<blue>[Rush] Un administrateur a planifié un Rush sur la ressource <gold>%resource%</gold> qui commencera dans <yellow>%delay%</yellow> minutes ! Tapez <green>/rush join</green> pour y participer !</blue>",
+                Map.of("%resource%", resource, "%delay%", String.valueOf(delayMinutes))));
+    }
+
+    private void broadcastRushSummary(List<PlayerProfile> profiles, Map<UUID, Integer> eloChanges, Map<UUID, Double> scores) {
+        List<UUID> rankedUuids = new ArrayList<>(scores.keySet());
+        rankedUuids.sort((id1, id2) -> Double.compare(scores.getOrDefault(id2, 0.0), scores.getOrDefault(id1, 0.0)));
+
+        Map<UUID, Integer> rankings = new HashMap<>();
+        for (int i = 0; i < rankedUuids.size(); i++) {
+            rankings.put(rankedUuids.get(i), i + 1);
+        }
+
+        class SummaryEntry {
+            final String name;
+            final int rank;
+            final double points;
+            final int eloChange;
+
+            SummaryEntry(String name, int rank, double points, int eloChange) {
+                this.name = name;
+                this.rank = rank;
+                this.points = points;
+                this.eloChange = eloChange;
+            }
+        }
+
+        List<SummaryEntry> entries = new ArrayList<>();
+        for (PlayerProfile profile : profiles) {
+            UUID uuid = profile.getUuid();
+            int rank = rankings.getOrDefault(uuid, 99);
+            double points = scores.getOrDefault(uuid, 0.0);
+            int eloChange = eloChanges.getOrDefault(uuid, 0);
+            entries.add(new SummaryEntry(profile.getPlayerName(), rank, points, eloChange));
+        }
+
+        entries.sort((e1, e2) -> Integer.compare(e2.eloChange, e1.eloChange));
+
+        List<String> lines = new ArrayList<>();
+        lines.add("<gold><b>[Rush] Résumé de l'événement de Rush :</b></gold>");
+        for (SummaryEntry entry : entries) {
+            String eloSign = entry.eloChange >= 0 ? "+" : "";
+            String eloColor = entry.eloChange >= 0 ? "green" : "red";
+            String line = String.format("<yellow>#%d</yellow> <white><hover:show_text:'<gray>Cliquez pour voir le profil de %s</gray>'><click:run_command:'/profile %s'>%s</click></hover></white> - <aqua>%.0f pts</aqua> (<%s>%s%d ELO</%s>)",
+                    entry.rank, entry.name, entry.name, entry.name, entry.points, eloColor, eloSign, entry.eloChange, eloColor);
+            lines.add(line);
+        }
+
+        if (Bukkit.getServer() != null) {
+            for (String line : lines) {
+                Bukkit.getServer().broadcast(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line));
+            }
+        }
+    }
+
+    public void printRushInfo(org.bukkit.command.CommandSender sender) {
+        if (!state.isDailyPlanned()) {
+            sender.sendMessage("§c[Rush] Aucun Rush planifié ou en cours.");
+            return;
+        }
+        sender.sendMessage("§b--- Informations sur le Rush ---");
+        sender.sendMessage("§fRessource : §a" + state.getDailyResource());
+        sender.sendMessage("§fDurée : §e" + state.getDurationMinutes() + " minutes");
+        sender.sendMessage("§fStatut : §e" + (state.isRushActive() ? "En cours" : "Attente de démarrage"));
+        sender.sendMessage("§fNombre d'inscrits : §e" + getRegisteredPlayersCount());
+
+        if (getRegisteredPlayersCount() > 0) {
+            sender.sendMessage("§fScores des inscrits :");
+            Map<UUID, Double> scores = state.getRegisteredScores();
+            scores.entrySet().stream()
+                .sorted((e1, e2) -> Double.compare(e2.getValue(), e1.getValue()))
+                .forEach(e -> {
+                    String name = Bukkit.getOfflinePlayer(e.getKey()).getName();
+                    sender.sendMessage("§f - " + (name != null ? name : e.getKey().toString()) + " : §a" + String.format("%.0f", e.getValue()) + " pts");
+                });
+        }
     }
 }

@@ -36,7 +36,7 @@ public class AdminTabCompleter implements TabCompleter {
         if (args.length == 3 && args[0].equalsIgnoreCase("admin")) {
             String sub = args[1].toLowerCase();
             if (sub.equals("rush")) {
-                return filterCompletions(List.of("start", "stop", "reload"), args[2]);
+                return filterCompletions(List.of("start", "stop", "end", "info", "add", "leave", "reload"), args[2]);
             } else if (List.of("setrank", "setelo", "addelo", "removeelo", "resetquota").contains(sub)) {
                 List<String> playerNames = new ArrayList<>();
                 for (Player player : Bukkit.getOnlinePlayers()) {
@@ -46,9 +46,18 @@ public class AdminTabCompleter implements TabCompleter {
             }
         }
 
-        if (args.length == 4 && args[0].equalsIgnoreCase("admin") && args[1].equalsIgnoreCase("rush") && args[2].equalsIgnoreCase("start")) {
-            List<String> resources = List.of("lumens-gained", "lumens-spent", "job-xp", "tool-xp", "vanilla-xp-gained", "vanilla-xp-spent");
-            return filterCompletions(resources, args[3]);
+        if (args.length == 4 && args[0].equalsIgnoreCase("admin") && args[1].equalsIgnoreCase("rush")) {
+            String subRush = args[2].toLowerCase();
+            if (subRush.equals("start")) {
+                List<String> resources = List.of("lumens-gained", "lumens-spent", "job-xp", "tool-xp", "vanilla-xp-gained", "vanilla-xp-spent");
+                return filterCompletions(resources, args[3]);
+            } else if (List.of("add", "leave").contains(subRush)) {
+                List<String> playerNames = new ArrayList<>();
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    playerNames.add(player.getName());
+                }
+                return filterCompletions(playerNames, args[3]);
+            }
         }
 
         return Collections.emptyList();

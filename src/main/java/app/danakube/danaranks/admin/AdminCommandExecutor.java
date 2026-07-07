@@ -220,7 +220,7 @@ public class AdminCommandExecutor implements CommandExecutor {
 
     private void handleRush(CommandSender sender, String[] args) {
         if (args.length < 3) {
-            sender.sendMessage("§cUsage: /danaranks admin rush <start|stop|reload>");
+            sender.sendMessage("§cUsage: /danaranks admin rush <start|stop|end|info|add|leave|reload>");
             return;
         }
 
@@ -229,7 +229,7 @@ public class AdminCommandExecutor implements CommandExecutor {
         switch (subRush) {
             case "start":
                 if (args.length < 5) {
-                    sender.sendMessage("§cUsage: /danaranks admin rush start <ressource> <durée>");
+                    sender.sendMessage("§cUsage: /danaranks admin rush start <ressource> <durée> [délai_lancement]");
                     return;
                 }
                 String res = args[3];
@@ -240,20 +240,89 @@ public class AdminCommandExecutor implements CommandExecutor {
                     sender.sendMessage("§cLa durée doit être un entier (en minutes).");
                     return;
                 }
-                plugin.getRushManager().forceStartRush(res, duration);
-                sender.sendMessage("§aRush forcé démarré sur la ressource " + res + " pendant " + duration + " minutes.");
+
+                int delay = 0;
+                if (args.length >= 6) {
+                    delay = parseDelayMinutes(args[5]);
+                    if (delay < 0) {
+                        sender.sendMessage("§cDélai invalide. Formats acceptés: minutes (ex: 5), heures (ex: 1h), secondes (ex: 30s).");
+                        return;
+                    }
+                }
+
+                if (delay > 0) {
+                    plugin.getRushManager().forceScheduleRush(res, duration, delay);
+                    sender.sendMessage("§aRush planifié sur la ressource " + res + " (durée: " + duration + "m) dans " + delay + " minutes.");
+                } else {
+                    plugin.getRushManager().forceStartRush(res, duration);
+                    sender.sendMessage("§aRush forcé démarré sur la ressource " + res + " pendant " + duration + " minutes.");
+                }
                 break;
             case "stop":
                 plugin.getRushManager().forceStopRush();
-                sender.sendMessage("§aRush arrêté.");
+                sender.sendMessage("§aRush arrêté de force (sans distribution).");
+                break;
+            case "end":
+                plugin.getRushManager().endRush(java.time.Instant.now());
+                sender.sendMessage("§aRush terminé normalement (distribution ELO et résumé lancés).");
+                break;
+            case "info":
+                plugin.getRushManager().printRushInfo(sender);
+                break;
+            case "add":
+                if (args.length < 4) {
+                    sender.sendMessage("§cUsage: /danaranks admin rush add <joueur>");
+                    return;
+                }
+                Player playerToAdd = Bukkit.getPlayer(args[3]);
+                if (playerToAdd == null) {
+                    sender.sendMessage("§cJoueur introuvable ou hors-ligne.");
+                    return;
+                }
+                boolean addSuccess = plugin.getRushManager().registerPlayer(playerToAdd.getUniqueId(), java.time.Instant.now());
+                if (addSuccess) {
+                    sender.sendMessage("§aJoueur " + playerToAdd.getName() + " ajouté de force au Rush.");
+                } else {
+                    sender.sendMessage("§cImpossible d'ajouter le joueur (déjà inscrit ou Rush non planifié).");
+                }
+                break;
+            case "leave":
+                if (args.length < 4) {
+                    sender.sendMessage("§cUsage: /danaranks admin rush leave <joueur>");
+                    return;
+                }
+                OfflinePlayer playerToLeave = Bukkit.getOfflinePlayer(args[3]);
+                boolean leaveSuccess = plugin.getRushManager().unregisterPlayer(playerToLeave.getUniqueId());
+                if (leaveSuccess) {
+                    sender.sendMessage("§aJoueur " + playerToLeave.getName() + " retiré de force du Rush.");
+                } else {
+                    sender.sendMessage("§cImpossible de retirer le joueur (non inscrit).");
+                }
                 break;
             case "reload":
                 plugin.getRushManager().reloadRushPlan();
                 sender.sendMessage("§aPlanification du Rush rechargée.");
                 break;
             default:
-                sender.sendMessage("§cUsage: /danaranks admin rush <start|stop|reload>");
+                sender.sendMessage("§cUsage: /danaranks admin rush <start|stop|end|info|add|leave|reload>");
                 break;
+        }
+    }
+
+    private int parseDelayMinutes(String input) {
+        try {
+            if (input.endsWith("m")) {
+                return Integer.parseInt(input.substring(0, input.length() - 1));
+            } else if (input.endsWith("h")) {
+                return Integer.parseInt(input.substring(0, input.length() - 1)) * 60;
+            } else if (input.endsWith("s")) {
+                int secs = Integer.parseInt(input.substring(0, input.length() - 1));
+                return Math.max(1, secs / 60);
+            } else {
+                return Integer.parseInt(input);
+            }
+        } catch (NumberFormatException e) {
+            return -1;
         }
     }
 
@@ -271,8 +340,12 @@ public class AdminCommandExecutor implements CommandExecutor {
         sender.sendMessage("§f - /danaranks admin addelo <joueur> <valeur>");
         sender.sendMessage("§f - /danaranks admin removeelo <joueur> <valeur>");
         sender.sendMessage("§f - /danaranks admin resetquota <joueur>");
-        sender.sendMessage("§f - /danaranks admin rush start <ressource> <durée>");
+        sender.sendMessage("§f - /danaranks admin rush start <ressource> <durée> [délai]");
         sender.sendMessage("§f - /danaranks admin rush stop");
+        sender.sendMessage("§f - /danaranks admin rush end");
+        sender.sendMessage("§f - /danaranks admin rush info");
+        sender.sendMessage("§f - /danaranks admin rush add <joueur>");
+        sender.sendMessage("§f - /danaranks admin rush leave <joueur>");
         sender.sendMessage("§f - /danaranks admin rush reload");
         sender.sendMessage("§f - /danaranks admin reload");
     }

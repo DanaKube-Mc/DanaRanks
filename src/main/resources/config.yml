@@ -29,6 +29,8 @@ reset:
 quotas-settings:
   # Multiplicateur pour atteindre le surplus maximum ELO (ex: 10.0 pour un surplus max à 10x la cible)
   surplus-multiplier: 10.0
+  # Liste des pourcentages de progression de quota à annoncer dans le chat
+  announce-milestones: [50, 100]
   # Paramètres de croissance par défaut (formule de scaling)
   scaling:
     multiplier-per-rank: 1.15 # +15% de quantité par rang
@@ -113,3 +115,8 @@ rush:
       elo-factor: 15.0
       gain-multiplier: 0.5
       loss-multiplier: 1.5
+
+# Configuration du classement (Leaderboard)
+leaderboard:
+  # Intervalle de mise à jour automatique en minutes (min 1)
+  update-interval: 5

@@ -1,12 +1,15 @@
 package app.danakube.danaranks.features.leaderboard;
 
 import app.danakube.danaranks.database.ProfileRepository;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import app.danakube.danaranks.api.event.PlayerEloChangeEvent;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class LeaderboardManager {
+public class LeaderboardManager implements Listener {
     private final ProfileRepository profileRepository;
     private final List<LeaderboardEntry> cachedLeaderboard = new CopyOnWriteArrayList<>();
 
@@ -23,6 +26,11 @@ public class LeaderboardManager {
             // Log or ignore
             return null;
         });
+    }
+
+    @EventHandler
+    public void onEloChange(PlayerEloChangeEvent event) {
+        updateLeaderboard();
     }
 
     public List<LeaderboardEntry> getCachedLeaderboard() {

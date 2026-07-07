@@ -55,10 +55,15 @@ public class MenuFactory implements Listener {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(name));
+            net.kyori.adventure.text.Component nameComponent = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                    .deserialize(name)
+                    .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false);
+            meta.displayName(nameComponent);
             if (lore != null) {
                 List<net.kyori.adventure.text.Component> serializedLore = lore.stream()
-                        .map(line -> net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line))
+                        .map(line -> net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                                .deserialize(line)
+                                .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false))
                         .toList();
                 meta.lore(serializedLore);
             }
