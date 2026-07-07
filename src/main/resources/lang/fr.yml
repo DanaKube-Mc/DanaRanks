@@ -23,4 +23,78 @@ messages:
   rush-discord-planned: "[Rush] Le Rush sur la ressource %resource% est planifié pour aujourd'hui ! Les inscriptions sont ouvertes via /rush join !"
   rush-discord-started: "[Rush] Le Rush quotidien sur la ressource %resource% vient de démarrer pour %duration% minutes !"
   rush-discord-pre-announce: "[Rush] Le Rush sur la ressource %resource% démarrera dans %time% minutes ! Tapez /rush join en jeu !"
+  player-only: "<red>Seuls les joueurs peuvent exécuter cette commande.</red>"
+  
+  # Admin messages
+  admin-db-save-error: "<red>Erreur lors de la sauvegarde du profil hors ligne : %error%</red>"
+  admin-db-load-error: "<red>Impossible de charger les données du joueur hors ligne : %error%</red>"
+  admin-usage-setrank: "<red>Usage: /danaranks admin setrank <joueur> <niveau></red>"
+  admin-rank-out-of-bounds: "<red>Le niveau doit être compris entre 1 et 50.</red>"
+  admin-rank-invalid-int: "<red>Le niveau doit être un nombre entier.</red>"
+  admin-rank-set-success: "<green>Grade de %player% défini à %newrank% (anciennement %oldrank%).</green>"
+  admin-usage-setelo: "<red>Usage: /danaranks admin setelo <joueur> <valeur></red>"
+  admin-elo-invalid-int: "<red>La valeur ELO doit être un nombre entier.</red>"
+  admin-elo-set-success: "<green>ELO de %player% défini à %elo%.</green>"
+  admin-usage-addelo: "<red>Usage: /danaranks admin addelo <joueur> <valeur></red>"
+  admin-elo-value-positive: "<red>La valeur doit être positive.</red>"
+  admin-value-invalid-int: "<red>La valeur doit être un nombre entier.</red>"
+  admin-elo-add-success: "<green>Ajouté %amount% ELO à %player%.</green>"
+  admin-usage-removeelo: "<red>Usage: /danaranks admin removeelo <joueur> <valeur></red>"
+  admin-elo-remove-success: "<red>Retiré %amount% ELO à %player%.</red>"
+  admin-usage-resetquota: "<red>Usage: /danaranks admin resetquota <joueur></red>"
+  admin-quota-reset-success: "<green>Quotas de %player% réinitialisés pour le rang actif %rank%.</green>"
+  admin-usage-rush: "<red>Usage: /danaranks admin rush <start|stop|end|info|add|leave|reload></red>"
+  admin-usage-rush-start: "<red>Usage: /danaranks admin rush start <ressource> <durée> [délai_lancement]</red>"
+  admin-rush-duration-invalid: "<red>La durée doit être un entier (en minutes).</red>"
+  admin-rush-delay-invalid: "<red>Délai invalide. Formats acceptés: minutes (ex: 5), heures (ex: 1h), secondes (ex: 30s).</red>"
+  admin-rush-planned: "<green>Rush planifié sur la ressource %resource% (durée: %duration%m) dans %delay% minutes.</green>"
+  admin-rush-started: "<green>Rush forcé démarré sur la ressource %resource% pendant %duration% minutes.</green>"
+  admin-rush-stopped: "<green>Rush arrêté de force (sans distribution).</green>"
+  admin-rush-ended: "<green>Rush terminé normalement (distribution ELO et résumé lancés).</green>"
+  admin-usage-rush-add: "<red>Usage: /danaranks admin rush add <joueur></red>"
+  admin-player-not-found: "<red>Joueur introuvable ou hors-ligne.</red>"
+  admin-rush-player-added: "<green>Joueur %player% ajouté de force au Rush.</green>"
+  admin-rush-player-add-failed: "<red>Impossible d'ajouter le joueur (déjà inscrit ou Rush non planifié).</red>"
+  admin-usage-rush-leave: "<red>Usage: /danaranks admin rush leave <joueur></red>"
+  admin-rush-player-removed: "<green>Joueur %player% retiré de force du Rush.</green>"
+  admin-rush-player-remove-failed: "<red>Impossible de retirer le joueur (non inscrit).</red>"
+  admin-rush-reload-success: "<green>Planification du Rush rechargée.</green>"
+  admin-reload-success: "<green>Configuration, GUIs et Langues de DanaRanks correctement rechargées !</green>"
+  admin-help: |
+    <blue>--- Commandes Administrateur DanaRanks ---</blue>
+     - <white>/danaranks admin setrank <joueur> <niveau></white>
+     - <white>/danaranks admin setelo <joueur> <valeur></white>
+     - <white>/danaranks admin addelo <joueur> <valeur></white>
+     - <white>/danaranks admin removeelo <joueur> <valeur></white>
+     - <white>/danaranks admin resetquota <joueur></white>
+     - <white>/danaranks admin rush start <ressource> <durée> [délai]</white>
+     - <white>/danaranks admin rush stop</white>
+     - <white>/danaranks admin rush end</white>
+     - <white>/danaranks admin rush info</white>
+     - <white>/danaranks admin rush add <joueur></white>
+     - <white>/danaranks admin rush leave <joueur></white>
+
+  # Leaderboard messages
+  leaderboard-chat-header: "<gold><b>Classement Global (Top 10) :</b></gold>"
+  leaderboard-chat-empty: "<gray>Aucun joueur dans le classement pour le moment.</gray>"
+  leaderboard-chat-format: "<yellow>#%pos%</yellow> <white>%player%</white> - <gold>Rang %rank% (%elo% ELO)</gold>"
+
+  # Quota messages
+  quota-pending-summary: "<blue>[Quotas] Vos quotas ont expiré pendant votre absence. Variation d'ELO : <%color%>%sign%%change%</%color%></blue>"
+  quota-join-header: "<aqua><b>[Quotas] Vos objectifs actuels (Rang %rank%) :</b></aqua>"
+  quota-join-objective-line: " - <yellow>%resource% : %progress% / %target%</yellow>"
+  quota-rush-planned-announcement: "<gold>[Rush] Un Rush quotidien est planifié aujourd'hui à <yellow>%time%</yellow> ! Ne le manquez pas !</gold>"
+  quota-milestone-reached: "<green>[Quotas] Objectif %objective% atteint ! (+%elo% ELO)</green>"
+  quota-milestone-progress: "<yellow>[Quotas] Progression : %objective% à %milestone%%% (%progress%/%target%)</yellow>"
+
+  # Rush info
+  rush-info-no-active: "<red>[Rush] Aucun Rush planifié ou en cours.</red>"
+  rush-info-header: "<blue>--- Informations sur le Rush ---</blue>"
+  rush-info-resource: "<white>Ressource : <green>%resource%</green></white>"
+  rush-info-duration: "<white>Durée : <yellow>%duration% minutes</yellow></white>"
+  rush-info-status: "<white>Statut : <yellow>%status%</yellow></white>"
+  rush-info-registered-count: "<white>Nombre d'inscrits : <yellow>%count%</yellow></white>"
+  rush-info-scores-header: "<white>Scores des inscrits :</white>"
+  rush-info-score-line: " - <white>%player%</white> : <green>%score% pts</green>"
+
 

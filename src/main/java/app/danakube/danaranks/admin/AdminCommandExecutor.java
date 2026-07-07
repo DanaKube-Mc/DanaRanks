@@ -10,6 +10,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
+import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -24,7 +26,7 @@ public class AdminCommandExecutor implements CommandExecutor {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (!sender.hasPermission("danaranks.admin")) {
-            sender.sendMessage("§cVous n'avez pas la permission d'exécuter cette commande.");
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("no-permission", "<red>Vous n'avez pas la permission d'exécuter cette commande."));
             return true;
         }
 
@@ -75,25 +77,26 @@ public class AdminCommandExecutor implements CommandExecutor {
             }
         }
 
-        // Hors ligne
         OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(targetName);
         UUID uuid = offlinePlayer.getUniqueId();
         plugin.getProfileRepository().loadProfile(uuid, targetName).thenAccept(opt -> {
             PlayerProfile profile = opt.orElseGet(() -> new PlayerProfile(uuid, targetName));
             callback.accept(profile);
             plugin.getProfileRepository().saveProfile(profile).exceptionally(ex -> {
-                sender.sendMessage("§cErreur lors de la sauvegarde du profil hors ligne : " + ex.getMessage());
+                sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-db-save-error",
+                        "<red>Erreur lors de la sauvegarde du profil hors ligne : %error%</red>", Map.of("%error%", ex.getMessage())));
                 return null;
             });
         }).exceptionally(ex -> {
-            sender.sendMessage("§cImpossible de charger les données du joueur hors ligne : " + ex.getMessage());
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-db-load-error",
+                    "<red>Impossible de charger les données du joueur hors ligne : %error%</red>", Map.of("%error%", ex.getMessage())));
             return null;
         });
     }
 
     private void handleSetRank(CommandSender sender, String[] args) {
         if (args.length < 4) {
-            sender.sendMessage("§cUsage: /danaranks admin setrank <joueur> <niveau>");
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-usage-setrank", "<red>Usage: /danaranks admin setrank <joueur> <niveau></red>"));
             return;
         }
 
@@ -102,11 +105,11 @@ public class AdminCommandExecutor implements CommandExecutor {
         try {
             newRank = Integer.parseInt(args[3]);
             if (newRank < 1 || newRank > 50) {
-                sender.sendMessage("§cLe niveau doit être compris entre 1 et 50.");
+                sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rank-out-of-bounds", "<red>Le niveau doit être compris entre 1 et 50.</red>"));
                 return;
             }
         } catch (NumberFormatException e) {
-            sender.sendMessage("§cLe niveau doit être un nombre entier.");
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rank-invalid-int", "<red>Le niveau doit être un nombre entier.</red>"));
             return;
         }
 
@@ -125,13 +128,15 @@ public class AdminCommandExecutor implements CommandExecutor {
                 }
             }
 
-            sender.sendMessage("§aGrade de " + targetName + " défini à " + newRank + " (anciennement " + oldRank + ").");
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rank-set-success",
+                    "<green>Grade de %player% défini à %newrank% (anciennement %oldrank%).</green>",
+                    Map.of("%player%", targetName, "%newrank%", String.valueOf(newRank), "%oldrank%", String.valueOf(oldRank))));
         }, sender);
     }
 
     private void handleSetElo(CommandSender sender, String[] args) {
         if (args.length < 4) {
-            sender.sendMessage("§cUsage: /danaranks admin setelo <joueur> <valeur>");
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-usage-setelo", "<red>Usage: /danaranks admin setelo <joueur> <valeur></red>"));
             return;
         }
 
@@ -140,7 +145,7 @@ public class AdminCommandExecutor implements CommandExecutor {
         try {
             targetElo = Integer.parseInt(args[3]);
         } catch (NumberFormatException e) {
-            sender.sendMessage("§cLa valeur ELO doit être un nombre entier.");
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-elo-invalid-int", "<red>La valeur ELO doit être un nombre entier.</red>"));
             return;
         }
 
@@ -150,13 +155,14 @@ public class AdminCommandExecutor implements CommandExecutor {
             int diff = newCumulative - oldCumulative;
 
             plugin.getEloService().addElo(profile, diff, "Admin setelo", true);
-            sender.sendMessage("§aELO de " + targetName + " défini à " + targetElo + ".");
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-elo-set-success",
+                    "<green>ELO de %player% défini à %elo%.</green>", Map.of("%player%", targetName, "%elo%", String.valueOf(targetElo))));
         }, sender);
     }
 
     private void handleAddElo(CommandSender sender, String[] args) {
         if (args.length < 4) {
-            sender.sendMessage("§cUsage: /danaranks admin addelo <joueur> <valeur>");
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-usage-addelo", "<red>Usage: /danaranks admin addelo <joueur> <valeur></red>"));
             return;
         }
 
@@ -165,23 +171,24 @@ public class AdminCommandExecutor implements CommandExecutor {
         try {
             amount = Integer.parseInt(args[3]);
             if (amount < 0) {
-                sender.sendMessage("§cLa valeur doit être positive.");
+                sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-elo-value-positive", "<red>La valeur doit être positive.</red>"));
                 return;
             }
         } catch (NumberFormatException e) {
-            sender.sendMessage("§cLa valeur doit être un nombre entier.");
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-value-invalid-int", "<red>La valeur doit être un nombre entier.</red>"));
             return;
         }
 
         getProfileOrLoad(targetName, profile -> {
             plugin.getEloService().addElo(profile, amount, "Admin addelo", true);
-            sender.sendMessage("§aAjouté " + amount + " ELO à " + targetName + ".");
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-elo-add-success",
+                    "<green>Ajouté %amount% ELO à %player%.</green>", Map.of("%amount%", String.valueOf(amount), "%player%", targetName)));
         }, sender);
     }
 
     private void handleRemoveElo(CommandSender sender, String[] args) {
         if (args.length < 4) {
-            sender.sendMessage("§cUsage: /danaranks admin removeelo <joueur> <valeur>");
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-usage-removeelo", "<red>Usage: /danaranks admin removeelo <joueur> <valeur></red>"));
             return;
         }
 
@@ -190,23 +197,24 @@ public class AdminCommandExecutor implements CommandExecutor {
         try {
             amount = Integer.parseInt(args[3]);
             if (amount < 0) {
-                sender.sendMessage("§cLa valeur doit être positive.");
+                sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-elo-value-positive", "<red>La valeur doit être positive.</red>"));
                 return;
             }
         } catch (NumberFormatException e) {
-            sender.sendMessage("§cLa valeur doit être un nombre entier.");
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-value-invalid-int", "<red>La valeur doit être un nombre entier.</red>"));
             return;
         }
 
         getProfileOrLoad(targetName, profile -> {
             plugin.getEloService().addElo(profile, -amount, "Admin removeelo", true);
-            sender.sendMessage("§cRetiré " + amount + " ELO à " + targetName + ".");
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-elo-remove-success",
+                    "<red>Retiré %amount% ELO à %player%.</red>", Map.of("%amount%", String.valueOf(amount), "%player%", targetName)));
         }, sender);
     }
 
     private void handleResetQuota(CommandSender sender, String[] args) {
         if (args.length < 3) {
-            sender.sendMessage("§cUsage: /danaranks admin resetquota <joueur>");
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-usage-resetquota", "<red>Usage: /danaranks admin resetquota <joueur></red>"));
             return;
         }
 
@@ -214,13 +222,14 @@ public class AdminCommandExecutor implements CommandExecutor {
         getProfileOrLoad(targetName, profile -> {
             int activeRank = plugin.getQuotaService().getProgressTracker().getActiveQuotaRank(profile);
             plugin.getQuotaService().getProgressTracker().resetQuotaProgress(profile, activeRank);
-            sender.sendMessage("§aQuotas de " + targetName + " réinitialisés pour le rang actif " + activeRank + ".");
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-quota-reset-success",
+                    "<green>Quotas de %player% réinitialisés pour le rang actif %rank%.</green>", Map.of("%player%", targetName, "%rank%", String.valueOf(activeRank))));
         }, sender);
     }
 
     private void handleRush(CommandSender sender, String[] args) {
         if (args.length < 3) {
-            sender.sendMessage("§cUsage: /danaranks admin rush <start|stop|end|info|add|leave|reload>");
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-usage-rush", "<red>Usage: /danaranks admin rush <start|stop|end|info|add|leave|reload></red>"));
             return;
         }
 
@@ -229,7 +238,7 @@ public class AdminCommandExecutor implements CommandExecutor {
         switch (subRush) {
             case "start":
                 if (args.length < 5) {
-                    sender.sendMessage("§cUsage: /danaranks admin rush start <ressource> <durée> [délai_lancement]");
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-usage-rush-start", "<red>Usage: /danaranks admin rush start <ressource> <durée> [délai_lancement]</red>"));
                     return;
                 }
                 String res = args[3];
@@ -237,7 +246,7 @@ public class AdminCommandExecutor implements CommandExecutor {
                 try {
                     duration = Integer.parseInt(args[4]);
                 } catch (NumberFormatException e) {
-                    sender.sendMessage("§cLa durée doit être un entier (en minutes).");
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-duration-invalid", "<red>La durée doit être un entier (en minutes).</red>"));
                     return;
                 }
 
@@ -245,66 +254,75 @@ public class AdminCommandExecutor implements CommandExecutor {
                 if (args.length >= 6) {
                     delay = parseDelayMinutes(args[5]);
                     if (delay < 0) {
-                        sender.sendMessage("§cDélai invalide. Formats acceptés: minutes (ex: 5), heures (ex: 1h), secondes (ex: 30s).");
+                        sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-delay-invalid",
+                                "<red>Délai invalide. Formats acceptés: minutes (ex: 5), heures (ex: 1h), secondes (ex: 30s).</red>"));
                         return;
                     }
                 }
 
                 if (delay > 0) {
                     plugin.getRushManager().forceScheduleRush(res, duration, delay);
-                    sender.sendMessage("§aRush planifié sur la ressource " + res + " (durée: " + duration + "m) dans " + delay + " minutes.");
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-planned",
+                            "<green>Rush planifié sur la ressource %resource% (durée: %duration%m) dans %delay% minutes.</green>",
+                            Map.of("%resource%", res, "%duration%", String.valueOf(duration), "%delay%", String.valueOf(delay))));
                 } else {
                     plugin.getRushManager().forceStartRush(res, duration);
-                    sender.sendMessage("§aRush forcé démarré sur la ressource " + res + " pendant " + duration + " minutes.");
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-started",
+                            "<green>Rush forcé démarré sur la ressource %resource% pendant %duration% minutes.</green>",
+                            Map.of("%resource%", res, "%duration%", String.valueOf(duration))));
                 }
                 break;
             case "stop":
                 plugin.getRushManager().forceStopRush();
-                sender.sendMessage("§aRush arrêté de force (sans distribution).");
+                sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-stopped", "<green>Rush arrêté de force (sans distribution).</green>"));
                 break;
             case "end":
-                plugin.getRushManager().endRush(java.time.Instant.now());
-                sender.sendMessage("§aRush terminé normalement (distribution ELO et résumé lancés).");
+                plugin.getRushManager().endRush(Instant.now());
+                sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-ended", "<green>Rush terminé normalement (distribution ELO et résumé lancés).</green>"));
                 break;
             case "info":
                 plugin.getRushManager().printRushInfo(sender);
                 break;
             case "add":
                 if (args.length < 4) {
-                    sender.sendMessage("§cUsage: /danaranks admin rush add <joueur>");
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-usage-rush-add", "<red>Usage: /danaranks admin rush add <joueur></red>"));
                     return;
                 }
                 Player playerToAdd = Bukkit.getPlayer(args[3]);
                 if (playerToAdd == null) {
-                    sender.sendMessage("§cJoueur introuvable ou hors-ligne.");
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-player-not-found", "<red>Joueur introuvable ou hors-ligne.</red>"));
                     return;
                 }
-                boolean addSuccess = plugin.getRushManager().registerPlayer(playerToAdd.getUniqueId(), java.time.Instant.now());
+                boolean addSuccess = plugin.getRushManager().registerPlayer(playerToAdd.getUniqueId(), Instant.now());
                 if (addSuccess) {
-                    sender.sendMessage("§aJoueur " + playerToAdd.getName() + " ajouté de force au Rush.");
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-player-added",
+                            "<green>Joueur %player% ajouté de force au Rush.</green>", Map.of("%player%", playerToAdd.getName())));
                 } else {
-                    sender.sendMessage("§cImpossible d'ajouter le joueur (déjà inscrit ou Rush non planifié).");
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-player-add-failed",
+                            "<red>Impossible d'ajouter le joueur (déjà inscrit ou Rush non planifié).</red>"));
                 }
                 break;
             case "leave":
                 if (args.length < 4) {
-                    sender.sendMessage("§cUsage: /danaranks admin rush leave <joueur>");
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-usage-rush-leave", "<red>Usage: /danaranks admin rush leave <joueur></red>"));
                     return;
                 }
                 OfflinePlayer playerToLeave = Bukkit.getOfflinePlayer(args[3]);
                 boolean leaveSuccess = plugin.getRushManager().unregisterPlayer(playerToLeave.getUniqueId());
                 if (leaveSuccess) {
-                    sender.sendMessage("§aJoueur " + playerToLeave.getName() + " retiré de force du Rush.");
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-player-removed",
+                            "<green>Joueur %player% retiré de force du Rush.</green>", Map.of("%player%", playerToLeave.getName() != null ? playerToLeave.getName() : args[3])));
                 } else {
-                    sender.sendMessage("§cImpossible de retirer le joueur (non inscrit).");
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-player-remove-failed",
+                            "<red>Impossible de retirer le joueur (non inscrit).</red>"));
                 }
                 break;
             case "reload":
                 plugin.getRushManager().reloadRushPlan();
-                sender.sendMessage("§aPlanification du Rush rechargée.");
+                sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-reload-success", "<green>Planification du Rush rechargée.</green>"));
                 break;
             default:
-                sender.sendMessage("§cUsage: /danaranks admin rush <start|stop|end|info|add|leave|reload>");
+                sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-usage-rush", "<red>Usage: /danaranks admin rush <start|stop|end|info|add|leave|reload></red>"));
                 break;
         }
     }
@@ -330,23 +348,24 @@ public class AdminCommandExecutor implements CommandExecutor {
         plugin.reloadConfig();
         plugin.reloadGuiConfig();
         plugin.getMessageManager().loadMessages();
-        sender.sendMessage("§aConfiguration, GUIs et Langues de DanaRanks correctement rechargées !");
+        sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-reload-success", "<green>Configuration, GUIs et Langues de DanaRanks correctement rechargées !</green>"));
     }
 
     private void sendHelp(CommandSender sender) {
-        sender.sendMessage("§b--- Commandes Administrateur DanaRanks ---");
-        sender.sendMessage("§f - /danaranks admin setrank <joueur> <niveau>");
-        sender.sendMessage("§f - /danaranks admin setelo <joueur> <valeur>");
-        sender.sendMessage("§f - /danaranks admin addelo <joueur> <valeur>");
-        sender.sendMessage("§f - /danaranks admin removeelo <joueur> <valeur>");
-        sender.sendMessage("§f - /danaranks admin resetquota <joueur>");
-        sender.sendMessage("§f - /danaranks admin rush start <ressource> <durée> [délai]");
-        sender.sendMessage("§f - /danaranks admin rush stop");
-        sender.sendMessage("§f - /danaranks admin rush end");
-        sender.sendMessage("§f - /danaranks admin rush info");
-        sender.sendMessage("§f - /danaranks admin rush add <joueur>");
-        sender.sendMessage("§f - /danaranks admin rush leave <joueur>");
-        sender.sendMessage("§f - /danaranks admin rush reload");
-        sender.sendMessage("§f - /danaranks admin reload");
+        sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-help",
+                "<blue>--- Commandes Administrateur DanaRanks ---</blue>\n" +
+                " - <white>/danaranks admin setrank <joueur> <niveau></white>\n" +
+                " - <white>/danaranks admin setelo <joueur> <valeur></white>\n" +
+                " - <white>/danaranks admin addelo <joueur> <valeur></white>\n" +
+                " - <white>/danaranks admin removeelo <joueur> <valeur></white>\n" +
+                " - <white>/danaranks admin resetquota <joueur></white>\n" +
+                " - <white>/danaranks admin rush start <ressource> <durée> [délai]</white>\n" +
+                " - <white>/danaranks admin rush stop</white>\n" +
+                " - <white>/danaranks admin rush end</white>\n" +
+                " - <white>/danaranks admin rush info</white>\n" +
+                " - <white>/danaranks admin rush add <joueur></white>\n" +
+                " - <white>/danaranks admin rush leave <joueur></white>\n" +
+                " - <white>/danaranks admin rush reload</white>\n" +
+                " - <white>/danaranks admin reload</white>"));
     }
 }

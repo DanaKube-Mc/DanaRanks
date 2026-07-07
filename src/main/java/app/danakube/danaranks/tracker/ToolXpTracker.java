@@ -4,6 +4,7 @@ import app.danakube.danaranks.core.DanaRanks;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import com.danakube.danatools.event.ToolXpGainEvent;
+import java.time.Instant;
 
 public class ToolXpTracker implements ResourceTracker {
     private final DanaRanks plugin;
@@ -28,7 +29,7 @@ public class ToolXpTracker implements ResourceTracker {
         plugin.getProfileCache().getProfile(player.getUniqueId()).ifPresent(profile -> {
             plugin.getQuotaService().getProgressTracker().incrementProgress(profile, plugin.getQuotaService().getQuotaConfig(), getResourceName(), amount);
             if (plugin.getRushManager() != null) {
-                plugin.getRushManager().handleResourceGain(player.getUniqueId(), getResourceName(), amount, java.time.Instant.now());
+                plugin.getRushManager().handleResourceGain(player.getUniqueId(), getResourceName(), amount, Instant.now());
             }
         });
     }

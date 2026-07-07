@@ -5,6 +5,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.player.PlayerExpChangeEvent;
 import org.bukkit.event.player.PlayerLevelChangeEvent;
+import java.time.Instant;
+import java.util.List;
 
 public class VanillaXpTracker implements ResourceTracker {
     private final DanaRanks plugin;
@@ -28,7 +30,7 @@ public class VanillaXpTracker implements ResourceTracker {
         if (player == null) return;
 
         // Anti-Abus / Anti-Cheat (Filtrage QuickShop, AxTrade...)
-        java.util.List<String> blocked = plugin.getConfig().getStringList("anti-abuse.blocked-plugin-packages");
+        List<String> blocked = plugin.getConfig().getStringList("anti-abuse.blocked-plugin-packages");
         if (blocked != null) {
             for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
                 String className = element.getClassName().toLowerCase();
@@ -46,7 +48,7 @@ public class VanillaXpTracker implements ResourceTracker {
         plugin.getProfileCache().getProfile(player.getUniqueId()).ifPresent(profile -> {
             plugin.getQuotaService().getProgressTracker().incrementProgress(profile, plugin.getQuotaService().getQuotaConfig(), getResourceName(), amount);
             if (plugin.getRushManager() != null) {
-                plugin.getRushManager().handleResourceGain(player.getUniqueId(), getResourceName(), amount, java.time.Instant.now());
+                plugin.getRushManager().handleResourceGain(player.getUniqueId(), getResourceName(), amount, Instant.now());
             }
         });
     }
@@ -59,7 +61,7 @@ public class VanillaXpTracker implements ResourceTracker {
         if (player == null) return;
 
         // Anti-Abus / Anti-Cheat (Filtrage QuickShop, AxTrade...)
-        java.util.List<String> blocked = plugin.getConfig().getStringList("anti-abuse.blocked-plugin-packages");
+        List<String> blocked = plugin.getConfig().getStringList("anti-abuse.blocked-plugin-packages");
         if (blocked != null) {
             for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
                 String className = element.getClassName().toLowerCase();
@@ -82,7 +84,7 @@ public class VanillaXpTracker implements ResourceTracker {
         plugin.getProfileCache().getProfile(player.getUniqueId()).ifPresent(profile -> {
             plugin.getQuotaService().getProgressTracker().incrementProgress(profile, plugin.getQuotaService().getQuotaConfig(), getResourceName(), xpSpent);
             if (plugin.getRushManager() != null) {
-                plugin.getRushManager().handleResourceGain(player.getUniqueId(), getResourceName(), xpSpent, java.time.Instant.now());
+                plugin.getRushManager().handleResourceGain(player.getUniqueId(), getResourceName(), xpSpent, Instant.now());
             }
         });
     }

@@ -7,6 +7,9 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
+import java.util.Map;
+
 public class LeaderboardCommand implements CommandExecutor {
     private final DanaRanks plugin;
 
@@ -31,19 +34,21 @@ public class LeaderboardCommand implements CommandExecutor {
     }
 
     private void printTop10(CommandSender sender) {
-        java.util.List<LeaderboardEntry> top = plugin.getLeaderboardManager().getCachedLeaderboard();
-        sender.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<gold><b>Classement Global (Top 10) :</b></gold>"));
+        List<LeaderboardEntry> top = plugin.getLeaderboardManager().getCachedLeaderboard();
+        sender.sendMessage(plugin.getMessageManager().getMessageComponent("leaderboard-chat-header", "<gold><b>Classement Global (Top 10) :</b></gold>"));
         int count = Math.min(10, top.size());
         if (count == 0) {
-            sender.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<gray>Aucun joueur dans le classement pour le moment.</gray>"));
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("leaderboard-chat-empty", "<gray>Aucun joueur dans le classement pour le moment.</gray>"));
             return;
         }
         for (int i = 0; i < count; i++) {
             LeaderboardEntry entry = top.get(i);
-            sender.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(
-                    String.format("<yellow>#%d</yellow> <white>%s</white> - <gold>Rang %d (%d ELO)</gold>",
-                            i + 1, entry.playerName(), entry.rankLevel(), entry.elo())
-            ));
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("leaderboard-chat-format",
+                    "<yellow>#%pos%</yellow> <white>%player%</white> - <gold>Rang %rank% (%elo% ELO)</gold>",
+                    Map.of("%pos%", String.valueOf(i + 1),
+                           "%player%", entry.playerName(),
+                           "%rank%", String.valueOf(entry.rankLevel()),
+                           "%elo%", String.valueOf(entry.elo()))));
         }
     }
 }

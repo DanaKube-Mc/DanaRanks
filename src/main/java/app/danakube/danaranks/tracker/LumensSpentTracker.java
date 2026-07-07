@@ -4,6 +4,8 @@ import app.danakube.danaranks.core.DanaRanks;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import su.nightexpress.excellenteconomy.api.event.ChangeBalanceEvent;
+import java.time.Instant;
+import java.util.List;
 
 public class LumensSpentTracker implements ResourceTracker {
     private final DanaRanks plugin;
@@ -23,7 +25,7 @@ public class LumensSpentTracker implements ResourceTracker {
         if (player == null) return;
 
         // Anti-Abus / Anti-Cheat (Filtrage QuickShop, AxTrade...)
-        java.util.List<String> blocked = plugin.getConfig().getStringList("anti-abuse.blocked-plugin-packages");
+        List<String> blocked = plugin.getConfig().getStringList("anti-abuse.blocked-plugin-packages");
         if (blocked != null) {
             for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
                 String className = element.getClassName().toLowerCase();
@@ -43,7 +45,7 @@ public class LumensSpentTracker implements ResourceTracker {
         plugin.getProfileCache().getProfile(player.getUniqueId()).ifPresent(profile -> {
             plugin.getQuotaService().getProgressTracker().incrementProgress(profile, plugin.getQuotaService().getQuotaConfig(), getResourceName(), spentAmount);
             if (plugin.getRushManager() != null) {
-                plugin.getRushManager().handleResourceGain(player.getUniqueId(), getResourceName(), spentAmount, java.time.Instant.now());
+                plugin.getRushManager().handleResourceGain(player.getUniqueId(), getResourceName(), spentAmount, Instant.now());
             }
         });
     }

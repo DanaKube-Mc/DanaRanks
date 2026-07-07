@@ -12,6 +12,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
+import app.danakube.danaranks.features.quota.ui.QuotaGUI;
 
 public class ProfileGUI {
     private final DanaRanks plugin;
@@ -148,7 +149,7 @@ public class ProfileGUI {
         ItemStack quotaItem = MenuFactory.createItem(quotaMat, quotaName, quotaLore);
         if (quotaSlot >= 0 && quotaSlot < size) {
             inv.setItem(quotaSlot, quotaItem);
-            holder.setAction(quotaSlot, event -> new app.danakube.danaranks.features.quota.ui.QuotaGUI(plugin).open(player));
+            holder.setAction(quotaSlot, event -> new QuotaGUI(plugin).open(player));
         }
 
         player.openInventory(inv);

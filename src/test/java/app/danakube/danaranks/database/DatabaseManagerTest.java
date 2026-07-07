@@ -4,6 +4,7 @@ import app.danakube.danaranks.core.profile.PlayerProfile;
 import app.danakube.danaranks.core.profile.PlayerProfileBuilder;
 import app.danakube.danaranks.core.profile.HistoryEntry;
 import app.danakube.danaranks.core.profile.EloService;
+import app.danakube.danaranks.hooks.PermissionHook;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -74,7 +75,7 @@ public class DatabaseManagerTest {
     @Test
     public void testOfflineEloModification() throws Exception {
         // Arrange
-        class PermissionHookSpy implements app.danakube.danaranks.hooks.PermissionHook {
+        class PermissionHookSpy implements PermissionHook {
             int callCount = 0;
             UUID lastUuid = null;
             int lastRanks = 0;

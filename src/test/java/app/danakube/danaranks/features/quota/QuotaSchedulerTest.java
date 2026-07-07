@@ -3,6 +3,7 @@ package app.danakube.danaranks.features.quota;
 import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class QuotaSchedulerTest {
@@ -18,7 +19,7 @@ public class QuotaSchedulerTest {
 
         // Assert
         Instant expected = LocalDateTime.of(2026, 7, 6, 4, 0)
-                .atZone(java.time.ZoneId.systemDefault())
+                .atZone(ZoneId.systemDefault())
                 .toInstant();
         assertEquals(expected, nextReset);
     }

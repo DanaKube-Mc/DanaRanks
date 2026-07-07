@@ -13,6 +13,7 @@ import org.bukkit.inventory.ItemStack;
 
 import java.time.Instant;
 import java.util.*;
+import app.danakube.danaranks.core.profile.ui.ProfileGUI;
 
 public class QuotaGUI {
     private final DanaRanks plugin;
@@ -82,7 +83,7 @@ public class QuotaGUI {
         ItemStack profileButtonItem = MenuFactory.createItem(profileButtonMat, profileButtonName, profileButtonLore);
         if (profileButtonSlot >= 0 && profileButtonSlot < size) {
             inv.setItem(profileButtonSlot, profileButtonItem);
-            holder.setAction(profileButtonSlot, event -> new app.danakube.danaranks.core.profile.ui.ProfileGUI(plugin).open(player));
+            holder.setAction(profileButtonSlot, event -> new ProfileGUI(plugin).open(player));
         }
 
         int activeRank = plugin.getQuotaService().getProgressTracker().getActiveQuotaRank(profile);

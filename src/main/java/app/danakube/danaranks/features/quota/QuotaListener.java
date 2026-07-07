@@ -11,9 +11,13 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
+import app.danakube.danaranks.features.rush.RushManager;
 
 public class QuotaListener implements Listener {
     private final DanaRanks plugin;
@@ -68,24 +72,22 @@ public class QuotaListener implements Listener {
                 boolean isGain = !summary.startsWith("-");
                 String eloColor = isGain ? "green" : "red";
                 String eloSign = isGain ? "+" : "";
-                player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(
-                        String.format("<blue>[Quotas] Vos quotas ont expiré pendant votre absence. Variation d'ELO : <%s>%s%s</%s></blue>",
-                                eloColor, eloSign, summary, eloColor)
-                ));
+                player.sendMessage(plugin.getMessageManager().getMessageComponent("quota-pending-summary",
+                        "<blue>[Quotas] Vos quotas ont expiré pendant votre absence. Variation d'ELO : <%color%>%sign%%change%</%color%></blue>",
+                        Map.of("%color%", eloColor, "%sign%", eloSign, "%change%", summary)));
             }
 
             // 2. Affichage des quotas actuels et de leur progression
             try {
                 int activeRank = plugin.getQuotaService().getProgressTracker().getActiveQuotaRank(profile);
-                java.util.Map<String, ObjectiveConfig> objectives = QuotaConfigLoader.getObjectivesForRank(plugin.getQuotaService().getQuotaConfig(), activeRank);
-                player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(
-                        "<aqua><b>[Quotas] Vos objectifs actuels (Rang " + activeRank + ") :</b></aqua>"
-                ));
+                Map<String, ObjectiveConfig> objectives = QuotaConfigLoader.getObjectivesForRank(plugin.getQuotaService().getQuotaConfig(), activeRank);
+                player.sendMessage(plugin.getMessageManager().getMessageComponent("quota-join-header",
+                        "<aqua><b>[Quotas] Vos objectifs actuels (Rang %rank%) :</b></aqua>", Map.of("%rank%", String.valueOf(activeRank))));
                 for (ObjectiveConfig obj : objectives.values()) {
                     double progress = plugin.getQuotaService().getProgressTracker().getProgress(profile, obj.name());
-                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(
-                            String.format(" - <yellow>%s : %.0f / %.0f</yellow>", obj.name(), progress, obj.target())
-                    ));
+                    player.sendMessage(plugin.getMessageManager().getMessageComponent("quota-join-objective-line",
+                            " - <yellow>%resource% : %progress% / %target%</yellow>",
+                            Map.of("%resource%", obj.name(), "%progress%", String.format("%.0f", progress), "%target%", String.format("%.0f", obj.target()))));
                 }
             } catch (Exception e) {
                 // Ignore safe fallback
@@ -93,15 +95,15 @@ public class QuotaListener implements Listener {
 
             // 3. Annonce si un Rush quotidien est planifié aujourd'hui
             try {
-                app.danakube.danaranks.features.rush.RushManager rm = plugin.getRushManager();
+                RushManager rm = plugin.getRushManager();
                 if (rm != null && rm.isDailyPlanned()) {
-                    java.time.LocalDateTime start = rm.getStartTime();
+                    LocalDateTime start = rm.getStartTime();
                     if (start != null) {
-                        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
                         String timeStr = start.format(formatter);
-                        player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(
-                                String.format("<gold>[Rush] Un Rush quotidien est planifié aujourd'hui à <yellow>%s</yellow> ! Ne le manquez pas !</gold>", timeStr)
-                        ));
+                        player.sendMessage(plugin.getMessageManager().getMessageComponent("quota-rush-planned-announcement",
+                                "<gold>[Rush] Un Rush quotidien est planifié aujourd'hui à <yellow>%time%</yellow> ! Ne le manquez pas !</gold>",
+                                Map.of("%time%", timeStr)));
                     }
                 }
             } catch (Exception e) {

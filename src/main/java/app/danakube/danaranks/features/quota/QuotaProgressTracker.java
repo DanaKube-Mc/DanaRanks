@@ -5,6 +5,13 @@ import app.danakube.danaranks.core.profile.PlayerProfile;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
+import app.danakube.danaranks.core.DanaRanks;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.configuration.file.FileConfiguration;
 
 public class QuotaProgressTracker {
     private final EloService eloService;
@@ -70,58 +77,60 @@ public class QuotaProgressTracker {
 
         checkBaseEloReward(profile, quotaConfig, normalized, newValue);
 
-        // Annonces de progression de quota
-        if (org.bukkit.Bukkit.getServer() != null) {
-            org.bukkit.entity.Player onlinePlayer = org.bukkit.Bukkit.getPlayer(profile.getUuid());
+        if (Bukkit.getServer() != null) {
+            Player onlinePlayer = Bukkit.getPlayer(profile.getUuid());
             if (onlinePlayer != null) {
                 try {
-                app.danakube.danaranks.core.DanaRanks plugin = org.bukkit.plugin.java.JavaPlugin.getPlugin(app.danakube.danaranks.core.DanaRanks.class);
-                if (plugin != null) {
-                    org.bukkit.configuration.file.FileConfiguration config = plugin.getConfig();
-                    java.util.List<Integer> milestones = config.getIntegerList("quotas-settings.announce-milestones");
-                    if (milestones == null || milestones.isEmpty()) {
-                        milestones = java.util.List.of(50, 100);
-                    }
-
-                    int activeRank = getActiveQuotaRank(profile);
-                    ObjectiveConfig obj = QuotaConfigLoader.getObjectiveConfig(quotaConfig, activeRank, normalized);
-                    if (obj != null) {
-                        double target = obj.target();
-                        double oldVal = current;
-
-                        Map<String, Object> progressData = profile.getQuotaProgress();
-                        Map<String, Object> announcedMap;
-                        Object announcedObj = progressData.get("announced_milestones");
-                        if (announcedObj instanceof Map) {
-                            announcedMap = (Map<String, Object>) announcedObj;
-                        } else {
-                            announcedMap = new HashMap<>();
-                            progressData.put("announced_milestones", announcedMap);
+                    DanaRanks plugin = JavaPlugin.getPlugin(DanaRanks.class);
+                    if (plugin != null) {
+                        FileConfiguration config = plugin.getConfig();
+                        List<Integer> milestones = config.getIntegerList("quotas-settings.announce-milestones");
+                        if (milestones == null || milestones.isEmpty()) {
+                            milestones = List.of(50, 100);
                         }
 
-                        java.util.List<Integer> announcedList = (java.util.List<Integer>) announcedMap.computeIfAbsent(normalized, k -> new java.util.ArrayList<Integer>());
+                        int activeRank = getActiveQuotaRank(profile);
+                        ObjectiveConfig obj = QuotaConfigLoader.getObjectiveConfig(quotaConfig, activeRank, normalized);
+                        if (obj != null) {
+                            double target = obj.target();
+                            double oldVal = current;
 
-                        for (int milestone : milestones) {
-                            double milestoneTarget = target * (milestone / 100.0);
-                            if (newValue >= milestoneTarget && oldVal < milestoneTarget && !announcedList.contains(milestone)) {
-                                announcedList.add(milestone);
-                                String msg;
-                                if (milestone >= 100) {
-                                    msg = String.format("<green>[Quotas] Objectif %s atteint ! (+%d ELO)</green>", obj.name(), obj.baseElo());
-                                } else {
-                                    msg = String.format("<yellow>[Quotas] Progression : %s à %d%% (%.0f/%.0f)</yellow>", obj.name(), milestone, newValue, target);
+                            Map<String, Object> progressData = profile.getQuotaProgress();
+                            Map<String, Object> announcedMap;
+                            Object announcedObj = progressData.get("announced_milestones");
+                            if (announcedObj instanceof Map) {
+                                announcedMap = (Map<String, Object>) announcedObj;
+                            } else {
+                                announcedMap = new HashMap<>();
+                                progressData.put("announced_milestones", announcedMap);
+                            }
+
+                            List<Integer> announcedList = (List<Integer>) announcedMap.computeIfAbsent(normalized, k -> new ArrayList<>());
+
+                            for (int milestone : milestones) {
+                                double milestoneTarget = target * (milestone / 100.0);
+                                if (newValue >= milestoneTarget && oldVal < milestoneTarget && !announcedList.contains(milestone)) {
+                                    announcedList.add(milestone);
+                                    if (milestone >= 100) {
+                                        onlinePlayer.sendMessage(plugin.getMessageManager().getMessageComponent("quota-milestone-reached",
+                                                "<green>[Quotas] Objectif %objective% atteint ! (+%elo% ELO)</green>",
+                                                Map.of("%objective%", obj.name(), "%elo%", String.valueOf(obj.baseElo()))));
+                                    } else {
+                                        onlinePlayer.sendMessage(plugin.getMessageManager().getMessageComponent("quota-milestone-progress",
+                                                "<yellow>[Quotas] Progression : %objective% à %milestone%%% (%progress%/%target%)</yellow>",
+                                                Map.of("%objective%", obj.name(), "%milestone%", String.valueOf(milestone),
+                                                        "%progress%", String.format("%.0f", newValue), "%target%", String.format("%.0f", target))));
+                                    }
                                 }
-                                onlinePlayer.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(msg));
                             }
                         }
                     }
+                } catch (Exception e) {
+                    // S'exécute silencieusement en cas d'absence du plugin (tests)
                 }
-            } catch (Exception e) {
-                // S'exécute silencieusement en cas d'absence du plugin (tests)
             }
         }
     }
-}
 
     public boolean isBaseRewarded(PlayerProfile profile, String resource) {
         String normalized = resource.replace("-", "_");
