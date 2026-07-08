@@ -119,8 +119,29 @@ public class MenuFactory implements Listener {
 
         String name = section.getString("name", "");
         List<String> lore = section.getStringList("lore");
-        Integer cmd = section.contains("custom-model-data") ? section.getInt("custom-model-data") : null;
+        Integer cmd = null;
+        if (section.contains("custom-model-data")) {
+            String cmdRaw = section.getString("custom-model-data");
+            if (cmdRaw != null) {
+                if (placeholders != null) {
+                    for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+                        cmdRaw = cmdRaw.replace(entry.getKey(), entry.getValue());
+                    }
+                }
+                try {
+                    cmd = Integer.parseInt(cmdRaw.trim());
+                } catch (NumberFormatException e) {
+                    // ignore
+                }
+            }
+        }
         String texture = section.getString("skull-texture");
+        if (texture != null && placeholders != null) {
+            for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+                texture = texture.replace(entry.getKey(), entry.getValue());
+            }
+        }
+
 
         // Placeholders replacement
         if (placeholders != null) {

@@ -57,6 +57,8 @@ public class ProfileGUI {
 
         // 3. Tête de joueur (Slot 13)
         int headSlot = config.getInt("menus.profile.items.player-head.slot", 13);
+        Integer currentRankCmdVal = plugin.getRankCustomModelData(profile.getRankLevel());
+        String rankCmdStr = currentRankCmdVal != null ? String.valueOf(currentRankCmdVal) : "0";
         ItemStack headItem = MenuFactory.loadItem(
                 config.getConfigurationSection("menus.profile.items.player-head"),
                 Material.PLAYER_HEAD,
@@ -64,7 +66,8 @@ public class ProfileGUI {
                         "%player%", player.getName(),
                         "%rank%", plugin.getRankDisplayName(profile.getRankLevel()),
                         "%elo%", String.valueOf(profile.getElo()),
-                        "%position%", positionStr
+                        "%position%", positionStr,
+                        "%rank_cmd%", rankCmdStr
                 ),
                 player
         );
@@ -78,10 +81,12 @@ public class ProfileGUI {
         Material pastMat = Material.matchMaterial(config.getString("menus.profile.timeline.materials.past", "GRAY_DYE"));
         Material currentMat = Material.matchMaterial(config.getString("menus.profile.timeline.materials.current", "GOLD_BLOCK"));
         Material futureMat = Material.matchMaterial(config.getString("menus.profile.timeline.materials.future", "RED_DYE"));
+        Material customMat = Material.matchMaterial(config.getString("menus.profile.timeline.materials.custom", "PAPER"));
 
         if (pastMat == null) pastMat = Material.GRAY_DYE;
         if (currentMat == null) currentMat = Material.GOLD_BLOCK;
         if (futureMat == null) futureMat = Material.RED_DYE;
+        if (customMat == null) customMat = Material.PAPER;
 
         List<Integer> timelineSlots = config.getIntegerList("menus.profile.timeline.slots");
         if (timelineSlots.isEmpty()) {
@@ -129,7 +134,13 @@ public class ProfileGUI {
                     prefix = "<red>" + rankName + " (Futur)";
                 }
 
-                ItemStack timelineItem = MenuFactory.createItem(itemMat, prefix, List.of("<gray>Progression du parcours"));
+                Integer rankCmd = plugin.getRankCustomModelData(rankForSlot);
+                ItemStack timelineItem;
+                if (rankCmd != null) {
+                    timelineItem = MenuFactory.createItem(customMat, prefix, List.of("<gray>Progression du parcours"), rankCmd, null, null);
+                } else {
+                    timelineItem = MenuFactory.createItem(itemMat, prefix, List.of("<gray>Progression du parcours"));
+                }
                 if (targetSlot >= 0 && targetSlot < size) {
                     inv.setItem(targetSlot, timelineItem);
                 }

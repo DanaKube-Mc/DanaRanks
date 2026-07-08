@@ -265,4 +265,12 @@ public final class DanaRanks extends JavaPlugin {
         }
         return "Rang " + level;
     }
+
+    public Integer getRankCustomModelData(int level) {
+        FileConfiguration config = getConfig();
+        if (config.contains("rank-custom-model-data." + level)) {
+            return config.getInt("rank-custom-model-data." + level);
+        }
+        return null;
+    }
 }
