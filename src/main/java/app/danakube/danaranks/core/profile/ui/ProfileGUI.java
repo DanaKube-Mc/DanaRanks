@@ -106,14 +106,6 @@ public class ProfileGUI {
         }
 
         int startRank = currentRank - currentSlotIdx;
-        int endRank = startRank + N - 1;
-
-        if (startRank < 1) {
-            startRank = 1;
-        } else if (endRank > 50) {
-            startRank = 50 - N + 1;
-        }
-        if (startRank < 1) startRank = 1;
 
         for (int k = 0; k < N; k++) {
             int targetSlot = timelineSlots.get(k);
@@ -143,6 +135,10 @@ public class ProfileGUI {
                 }
                 if (targetSlot >= 0 && targetSlot < size) {
                     inv.setItem(targetSlot, timelineItem);
+                }
+            } else {
+                if (targetSlot >= 0 && targetSlot < size) {
+                    inv.setItem(targetSlot, null);
                 }
             }
         }
