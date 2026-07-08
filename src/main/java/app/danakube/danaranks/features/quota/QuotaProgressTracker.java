@@ -124,11 +124,11 @@ public class QuotaProgressTracker {
                                     if (milestone >= 100) {
                                         onlinePlayer.sendMessage(plugin.getMessageManager().getMessageComponent("quota-milestone-reached",
                                                 "<green>[Quotas] Objectif %objective% atteint ! (+%elo% ELO)</green>",
-                                                Map.of("%objective%", obj.name(), "%elo%", String.valueOf(obj.baseElo()))));
+                                                Map.of("%objective%", plugin.getResourceDisplayName(obj.name()), "%elo%", String.valueOf(obj.baseElo()))));
                                     } else {
                                         onlinePlayer.sendMessage(plugin.getMessageManager().getMessageComponent("quota-milestone-progress",
                                                 "<yellow>[Quotas] Progression : %objective% à %milestone%%% (%progress%/%target%)</yellow>",
-                                                Map.of("%objective%", obj.name(), "%milestone%", String.valueOf(milestone),
+                                                Map.of("%objective%", plugin.getResourceDisplayName(obj.name()), "%milestone%", String.valueOf(milestone),
                                                         "%progress%", String.format("%.0f", newValue), "%target%", String.format("%.0f", target))));
                                     }
                                 }
@@ -197,7 +197,6 @@ public class QuotaProgressTracker {
         initializeActiveObjectives(profile, activeRank);
     }
 
-    @SuppressWarnings("unchecked")
     public Map<String, ObjectiveConfig> getActiveObjectives(PlayerProfile profile) {
         Map<String, Object> progress = profile.getQuotaProgress();
         Object activeObj = progress.get("active_objectives");
@@ -213,7 +212,18 @@ public class QuotaProgressTracker {
                 int maxSurplusElo = ((Number) objData.get("maxSurplusElo")).intValue();
                 int failPenalty = ((Number) objData.get("failPenalty")).intValue();
 
-                result.put(name, new ObjectiveConfig(name, target, baseElo, maxSurplusElo, failPenalty));
+                String normalized = name.replace("-", "_");
+                String material = null;
+                Integer cmd = null;
+                if (quotaService != null && quotaService.getQuotaConfig() != null) {
+                    ObjectiveConfig base = quotaService.getQuotaConfig().baseObjectives().get(normalized);
+                    if (base != null) {
+                        material = base.material();
+                        cmd = base.customModelData();
+                    }
+                }
+
+                result.put(name, new ObjectiveConfig(name, target, baseElo, maxSurplusElo, failPenalty, material, cmd));
             }
             return result;
         }
@@ -223,7 +233,6 @@ public class QuotaProgressTracker {
         return getActiveObjectives(profile);
     }
 
-    @SuppressWarnings("unchecked")
     public void initializeActiveObjectives(PlayerProfile profile, int rank) {
         QuotaConfig quotaConfig = null;
         if (quotaService != null) {
@@ -257,12 +266,13 @@ public class QuotaProgressTracker {
 
 
         List<ObjectiveConfig> potential = new ArrayList<>();
+        RankBracket bracket = QuotaConfigLoader.getBracketForRank(quotaConfig, rank);
         for (ObjectiveConfig base : quotaConfig.baseObjectives().values()) {
             double scaledTarget = Math.round(base.target() * Math.pow(quotaConfig.scalingMultiplierPerRank(), rank - 1));
-            potential.add(new ObjectiveConfig(base.name(), scaledTarget, base.baseElo(), base.maxSurplusElo(), base.failPenalty()));
+            potential.add(new ObjectiveConfig(base.name(), scaledTarget, bracket.baseElo(), bracket.maxSurplusElo(), bracket.failPenalty(), base.material(), base.customModelData()));
         }
 
-        int maxObj = quotaConfig.maxObjectives();
+        int maxObj = bracket.maxObjectives();
         if (maxObj <= 0) {
             maxObj = potential.size();
         }
@@ -279,9 +289,9 @@ public class QuotaProgressTracker {
         }
 
         int activeCount = selected.size();
-        int baseEloEach = activeCount > 0 ? (int) Math.round((double) quotaConfig.globalBaseElo() / activeCount) : 0;
-        int maxSurplusEach = activeCount > 0 ? (int) Math.round((double) quotaConfig.globalMaxSurplusElo() / activeCount) : 0;
-        int failPenaltyEach = activeCount > 0 ? (int) Math.round((double) quotaConfig.globalFailPenalty() / activeCount) : 0;
+        int baseEloEach = activeCount > 0 ? (int) Math.round((double) bracket.baseElo() / activeCount) : 0;
+        int maxSurplusEach = activeCount > 0 ? (int) Math.round((double) bracket.maxSurplusElo() / activeCount) : 0;
+        int failPenaltyEach = activeCount > 0 ? (int) Math.round((double) bracket.failPenalty() / activeCount) : 0;
 
         Map<String, Map<String, Object>> activeMap = new HashMap<>();
         for (ObjectiveConfig obj : selected) {

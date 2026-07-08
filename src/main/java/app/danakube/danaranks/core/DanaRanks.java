@@ -256,4 +256,40 @@ public final class DanaRanks extends JavaPlugin {
         File guiFile = new File(getDataFolder(), "gui.yml");
         guiConfig = YamlConfiguration.loadConfiguration(guiFile);
     }
+
+    public String getRankDisplayName(int level) {
+        FileConfiguration config = getConfig();
+        String customName = config.getString("rank-names." + level);
+        if (customName != null) {
+            return customName;
+        }
+        return "Rang " + level;
+    }
+
+    public Integer getRankCustomModelData(int level) {
+        FileConfiguration config = getConfig();
+        if (config.contains("rank-custom-model-data." + level)) {
+            return config.getInt("rank-custom-model-data." + level);
+        }
+        return null;
+    }
+
+    public String getResourceDisplayName(String resourceId) {
+        String translated = getMessageManager().getMessage("resources." + resourceId, null);
+        if (translated != null && !translated.isEmpty()) {
+            return translated;
+        }
+        FileConfiguration config = getConfig();
+        String normalized = resourceId.replace("-", "_");
+        for (String sectionName : java.util.List.of("resources", "ressources")) {
+            if (config.contains(sectionName + "." + normalized + ".name")) {
+                return config.getString(sectionName + "." + normalized + ".name");
+            }
+            String dashKey = resourceId.replace("_", "-");
+            if (config.contains(sectionName + "." + dashKey + ".name")) {
+                return config.getString(sectionName + "." + dashKey + ".name");
+            }
+        }
+        return resourceId;
+    }
 }

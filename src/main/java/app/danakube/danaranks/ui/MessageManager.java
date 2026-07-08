@@ -61,13 +61,22 @@ public class MessageManager {
                 }
             }
         }
+        if (config.isConfigurationSection("resources")) {
+            for (String key : config.getConfigurationSection("resources").getKeys(false)) {
+                String value = config.getString("resources." + key);
+                if (value != null) {
+                    messages.put("resources." + key, value);
+                }
+            }
+        }
     }
 
     private void createDefaultLangFile(File file) {
         YamlConfiguration config = new YamlConfiguration();
-        config.set("messages.kick-database-error", "<red>[DanaRanks] Impossible de charger vos données de rang. Veuillez vous reconnecter.");
-        config.set("messages.no-permission", "<red>Vous n'avez pas la permission d'exécuter cette commande.");
-        config.set("messages.profile-loaded", "<green>Votre profil de rang a été correctement chargé !");
+        config.set("messages.prefix", "<b><gradient:#F82F04:#FFEE2E>DanaKube</gradient> <#c0c0c0>|</b> <#d4d9d8>");
+        config.set("messages.kick-database-error", "%prefixe%<red>Impossible de charger vos données de rang. Veuillez vous reconnecter.");
+        config.set("messages.no-permission", "%prefixe%<red>Vous n'avez pas la permission d'exécuter cette commande.");
+        config.set("messages.profile-loaded", "%prefixe%<green>Votre profil de rang a été correctement chargé !");
         config.set("messages.plugin-enabled", "[DanaRanks] DanaRanks has been enabled!");
         config.set("messages.plugin-disabled", "[DanaRanks] DanaRanks has been disabled!");
         config.set("messages.luckperms-registered", "LuckPerms hook successfully registered.");
@@ -81,8 +90,18 @@ public class MessageManager {
         }
     }
 
+    private String resolvePrefix(String raw) {
+        if (raw == null) return null;
+        String prefix = messages.get("prefix");
+        if (prefix == null) {
+            prefix = "";
+        }
+        return raw.replace("%prefix%", prefix).replace("%prefixe%", prefix);
+    }
+
     public String getRawMessage(String key, String defaultValue) {
-        return messages.getOrDefault(key, defaultValue);
+        String raw = messages.getOrDefault(key, defaultValue);
+        return resolvePrefix(raw);
     }
 
     public String getMessage(String key, String defaultValue) {
@@ -90,6 +109,10 @@ public class MessageManager {
         if (raw == null) {
             raw = defaultValue;
         }
+        if (raw == null) {
+            return null;
+        }
+        raw = resolvePrefix(raw);
         Component component = MiniMessage.miniMessage().deserialize(raw);
         return LegacyComponentSerializer.legacySection().serialize(component);
     }
@@ -103,6 +126,10 @@ public class MessageManager {
         if (raw == null) {
             raw = defaultValue;
         }
+        if (raw == null) {
+            return Component.empty();
+        }
+        raw = resolvePrefix(raw);
         return MiniMessage.miniMessage().deserialize(raw);
     }
 
@@ -111,8 +138,14 @@ public class MessageManager {
         if (raw == null) {
             raw = defaultValue;
         }
-        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-            raw = raw.replace(entry.getKey(), entry.getValue());
+        if (raw == null) {
+            return Component.empty();
+        }
+        raw = resolvePrefix(raw);
+        if (placeholders != null) {
+            for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+                raw = raw.replace(entry.getKey(), entry.getValue());
+            }
         }
         return MiniMessage.miniMessage().deserialize(raw);
     }

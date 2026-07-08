@@ -42,19 +42,40 @@ quotas-settings:
   scaling:
     multiplier-per-rank: 1.22 # +22% de quantité par rang
   # Quota de base pour le Rang 1 (Fer I, Période = 1 jour, pas de pénalité donc fail-penalty = 0)
-  base-rank-1:
-    # Paramètres ELO globaux et nombre d'objectifs max pour ce rang
-    base-elo: 10
-    max-surplus-elo: 20
-    fail-penalty: 0
-    max-objectives: 2
+  ranks:
+    1-10:
+      # Paramètres ELO globaux et nombre d'objectifs max pour ce rang
+      base-elo: 10
+      max-surplus-elo: 20
+      fail-penalty: 0
+      max-objectives: 2
+    11-20:
+      # Paramètres ELO globaux et nombre d'objectifs max pour ce rang
+      base-elo: 10
+      max-surplus-elo: 20
+      fail-penalty: 5
+      max-objectives: 3
+    21-30:
+      # Paramètres ELO globaux et nombre d'objectifs max pour ce rang
+      base-elo: 10
+      max-surplus-elo: 20
+      fail-penalty: 10
+      max-objectives: 4
+    31-40:
+      # Paramètres ELO globaux et nombre d'objectifs max pour ce rang
+      base-elo: 0
+      max-surplus-elo: 30
+      fail-penalty: 20
+      max-objectives: 4
+    41-50:
+      # Paramètres ELO globaux et nombre d'objectifs max pour ce rang
+      base-elo: 0
+      max-surplus-elo: 40
+      fail-penalty: 25
+      max-objectives: 4
 
-    # Liste de tous les objectifs disponibles pour ce rang
-    objectives:
-      lumens-gained:
-        target: 1000
-      job-xp-all:
-        target: 500
+    # Les objectifs actifs du rang 1 et leurs cibles de départ sont désormais configurés
+    # de façon centralisée dans la section 'resources' au bas de ce fichier.
 
 # Configuration du Rush Quotidien
 rush:
@@ -82,6 +103,11 @@ rush:
     - "lumens-gained"
     - "lumens-spent"
     - "job-xp-all"
+    - "job-xp-mineur"
+    - "job-xp-bucheron"
+    - "job-xp-fermier"
+    - "job-xp-pecheur"
+    - "job-xp-traqueur"
     - "tool-xp"
     - "vanilla-xp-gained"
     - "vanilla-xp-spent"
@@ -128,3 +154,158 @@ rush:
 leaderboard:
   # Intervalle de mise à jour automatique en minutes (min 1)
   update-interval: 5
+
+# Noms personnalisés des grades pour remplacer les numéros de rangs
+# Si un rang n'est pas défini ici, il s'affichera par défaut sous la forme "Rang X".
+rank-names:
+  1: "Fer I"
+  2: "Fer II"
+  3: "Fer III"
+  4: "Fer IV"
+  5: "Fer V"
+  6: "Fer VI"
+  7: "Fer VII"
+  8: "Fer VIII"
+  9: "Fer IX"
+  10: "Fer X"
+  11: "Bronze I"
+  12: "Bronze II"
+  13: "Bronze III"
+  14: "Bronze IV"
+  15: "Bronze V"
+  16: "Bronze VI"
+  17: "Bronze VII"
+  18: "Bronze VIII"
+  19: "Bronze IX"
+  20: "Bronze X"
+  21: "Argent I"
+  22: "Argent II"
+  23: "Argent III"
+  24: "Argent IV"
+  25: "Argent V"
+  26: "Argent VI"
+  27: "Argent VII"
+  28: "Argent VIII"
+  29: "Argent IX"
+  30: "Argent X"
+  31: "Or I"
+  32: "Or II"
+  33: "Or III"
+  34: "Or IV"
+  35: "Or V"
+  36: "Or VI"
+  37: "Or VII"
+  38: "Or VIII"
+  39: "Or IX"
+  40: "Or X"
+  41: "Platine I"
+  42: "Platine II"
+  43: "Platine III"
+  44: "Platine IV"
+  45: "Platine V"
+  46: "Platine VI"
+  47: "Platine VII"
+  48: "Platine VIII"
+  49: "Platine IX"
+  50: "Platine X"
+
+# CustomModelData d'ItemAdder pour chaque niveau de grade (facultatif)
+# Permet d'afficher l'icône personnalisée du grade dans les menus.
+rank-custom-model-data:
+  1: 10000
+  2: 10001
+  3: 10002
+  4: 10003
+  5: 10004
+  6: 10005
+  7: 10006
+  8: 10007
+  9: 10008
+  10: 10009
+  11: 10010
+  12: 10011
+  13: 10012
+  14: 10013
+  15: 10014
+  16: 10015
+  17: 10016
+  18: 10017
+  19: 10018
+  20: 10019
+  21: 10020
+  22: 10021
+  23: 10022
+  24: 10023
+  25: 10024
+  26: 10025
+  27: 10026
+  28: 10027
+  29: 10028
+  30: 10029
+  31: 10030
+  32: 10031
+  33: 10032
+  34: 10033
+  35: 10034
+  36: 10035
+  37: 10036
+  38: 10037
+  39: 10038
+  40: 10039
+  41: 10040
+  42: 10041
+  43: 10042
+  44: 10043
+  45: 10044
+  46: 10045
+  47: 10046
+  48: 10047
+  49: 10048
+  50: 10049
+
+# Centralisation de toutes les ressources (quotas, Rush, et interfaces graphiques)
+resources:
+  vanilla-xp-gained:
+    name: "XP Vanilla (Gagnée)"
+    material: "EXPERIENCE_BOTTLE"
+    target: 500
+  vanilla-xp-spent:
+    name: "XP Vanilla (Consommée)"
+    material: "EXPERIENCE_BOTTLE"
+    target: 300
+  lumens-gained:
+    name: "Lumens Gagnés"
+    material: "GOLD_NUGGET"
+    target: 1000
+  lumens-spent:
+    name: "Lumens Dépensés"
+    material: "GOLD_NUGGET"
+    target: 800
+  job-xp-all:
+    name: "Toutes XP Métiers"
+    material: "DIAMOND_PICKAXE"
+    target: 500
+  tool-xp:
+    name: "XP Outils"
+    material: "GOLDEN_SWORD"
+    target: 1000
+  job-xp-mineur:
+    name: "XP Métier Mineur"
+    material: "IRON_PICKAXE"
+    target: 500
+  job-xp-bucheron:
+    name: "XP Métier Bûcheron"
+    material: "IRON_AXE"
+    target: 500
+  job-xp-fermier:
+    name: "XP Métier Fermier"
+    material: "IRON_HOE"
+    target: 500
+  job-xp-pecheur:
+    name: "XP Métier Pêcheur"
+    material: "FISHING_ROD"
+    target: 500
+  job-xp-traqueur:
+    name: "XP Métier Traqueur"
+    material: "FISHING_ROD"
+    target: 500

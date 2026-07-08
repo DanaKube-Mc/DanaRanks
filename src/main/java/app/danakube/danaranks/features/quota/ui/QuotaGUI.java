@@ -3,7 +3,6 @@ package app.danakube.danaranks.features.quota.ui;
 import app.danakube.danaranks.core.DanaRanks;
 import app.danakube.danaranks.core.profile.PlayerProfile;
 import app.danakube.danaranks.features.quota.ObjectiveConfig;
-import app.danakube.danaranks.features.quota.QuotaConfigLoader;
 import app.danakube.danaranks.ui.shared.MenuFactory;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -36,9 +35,8 @@ public class QuotaGUI {
         if (profileOpt.isEmpty()) return;
         PlayerProfile profile = profileOpt.get();
 
-        Material borderMat = Material.matchMaterial(config.getString("menus.quota.items.border.material", "GRAY_STAINED_GLASS_PANE"));
-        if (borderMat == null) borderMat = Material.GRAY_STAINED_GLASS_PANE;
-        ItemStack borderItem = MenuFactory.createItem(borderMat, " ", null);
+        // 1. Bordure
+        ItemStack borderItem = MenuFactory.loadItem(config.getConfigurationSection("menus.quota.items.border"), Material.GRAY_STAINED_GLASS_PANE);
         List<Integer> borderSlots = config.getIntegerList("menus.quota.items.border.slots");
         for (int slot : borderSlots) {
             if (slot >= 0 && slot < size) {
@@ -46,8 +44,6 @@ public class QuotaGUI {
             }
         }
 
-        Material clockMat = Material.matchMaterial(config.getString("menus.quota.items.clock.material", "CLOCK"));
-        if (clockMat == null) clockMat = Material.CLOCK;
         int clockSlot = config.getInt("menus.quota.items.clock.slot", 22);
 
         int periodDays = plugin.getQuotaService().getQuotaScheduler().getPeriodDays(plugin.getQuotaService().getLevelFromRank(profile.getRankLevel()));
@@ -64,23 +60,24 @@ public class QuotaGUI {
             timeRemaining = String.format("%02dh %02dm %02ds", hours, minutes, seconds);
         }
 
-        String clockName = config.getString("menus.quota.items.clock.name", "<aqua>Temps restant").replace("%time_remaining%", timeRemaining);
-        List<String> clockLore = config.getStringList("menus.quota.items.clock.lore");
-        List<String> formattedClockLore = clockLore.stream()
-                .map(line -> line.replace("%time_remaining%", timeRemaining))
-                .toList();
-        ItemStack clockItem = MenuFactory.createItem(clockMat, clockName, formattedClockLore);
+        ItemStack clockItem = MenuFactory.loadItem(
+                config.getConfigurationSection("menus.quota.items.clock"),
+                Material.CLOCK,
+                Map.of("%time_remaining%", timeRemaining),
+                null
+        );
         if (clockSlot >= 0 && clockSlot < size) {
             inv.setItem(clockSlot, clockItem);
         }
 
         // Bouton retour profile (Slot 18 par défaut)
         int profileButtonSlot = config.getInt("menus.quota.items.profile-button.slot", 18);
-        Material profileButtonMat = Material.matchMaterial(config.getString("menus.quota.items.profile-button.material", "BARRIER"));
-        if (profileButtonMat == null) profileButtonMat = Material.BARRIER;
-        String profileButtonName = config.getString("menus.quota.items.profile-button.name", "<red>Retour au Profil");
-        List<String> profileButtonLore = config.getStringList("menus.quota.items.profile-button.lore");
-        ItemStack profileButtonItem = MenuFactory.createItem(profileButtonMat, profileButtonName, profileButtonLore);
+        ItemStack profileButtonItem = MenuFactory.loadItem(
+                config.getConfigurationSection("menus.quota.items.profile-button"),
+                Material.BARRIER,
+                Map.of("%player%", player.getName()),
+                player
+        );
         if (profileButtonSlot >= 0 && profileButtonSlot < size) {
             inv.setItem(profileButtonSlot, profileButtonItem);
             holder.setAction(profileButtonSlot, event -> new ProfileGUI(plugin).open(player));
@@ -93,12 +90,26 @@ public class QuotaGUI {
         String barSymbolEmpty = config.getString("menus.quota.objectives.bar-symbol-empty", "░");
         int barSize = config.getInt("menus.quota.objectives.bar-size", 10);
 
+        List<Integer> objectiveSlots = config.getIntegerList("menus.quota.slots");
+        if (objectiveSlots.isEmpty()) objectiveSlots = config.getIntegerList("menus.quota.slot");
+        if (objectiveSlots.isEmpty()) objectiveSlots = config.getIntegerList("menus.quota.objectives.slots");
+        if (objectiveSlots.isEmpty()) objectiveSlots = config.getIntegerList("menus.quota.objectives.slot");
+
+        int objIdx = 0;
         int currentSlot = 0;
+
         for (ObjectiveConfig obj : objectives.values()) {
-            while (currentSlot < size && (borderSlots.contains(currentSlot) || currentSlot == clockSlot || currentSlot == profileButtonSlot)) {
-                currentSlot++;
+            int targetSlot;
+            if (!objectiveSlots.isEmpty()) {
+                if (objIdx >= objectiveSlots.size()) break;
+                targetSlot = objectiveSlots.get(objIdx++);
+            } else {
+                while (currentSlot < size && (borderSlots.contains(currentSlot) || currentSlot == clockSlot || currentSlot == profileButtonSlot)) {
+                    currentSlot++;
+                }
+                if (currentSlot >= size) break;
+                targetSlot = currentSlot++;
             }
-            if (currentSlot >= size) break;
 
             double progress = plugin.getQuotaService().getProgressTracker().getProgress(profile, obj.name());
             double target = obj.target();
@@ -108,29 +119,42 @@ public class QuotaGUI {
             filledCount = Math.max(0, Math.min(barSize, filledCount));
             String bar = barSymbolFilled.repeat(filledCount) + barSymbolEmpty.repeat(barSize - filledCount);
 
-            String formattedName = format.replace("%resource%", obj.name())
+            String formattedName = format.replace("%resource%", plugin.getResourceDisplayName(obj.name()))
                     .replace("%progress%", String.format("%.0f", progress))
                     .replace("%target%", String.format("%.0f", target))
                     .replace("%percentage%", percentage + "%")
                     .replace("%bar%", bar);
 
+            String baseRewardFormat = config.getString("menus.quota.format.base-reward", "<gray>Base reward : <gold>+%elo% ELO</gold></gray>");
+            String maxSurplusFormat = config.getString("menus.quota.format.max-surplus", "<gray>Max surplus : <gold>+%elo% ELO</gold></gray>");
+            String failPenaltyFormat = config.getString("menus.quota.format.fail-penalty", "<gray>Failure penalty : <red>-%elo% ELO</red></gray>");
+
             List<String> lore = new ArrayList<>();
-            lore.add("<gray>Base reward : <gold>+" + obj.baseElo() + " ELO</gold>");
-            lore.add("<gray>Max surplus : <gold>+" + obj.maxSurplusElo() + " ELO</gold>");
+            lore.add(baseRewardFormat.replace("%elo%", String.valueOf(obj.baseElo())));
+            lore.add(maxSurplusFormat.replace("%elo%", String.valueOf(obj.maxSurplusElo())));
             if (obj.failPenalty() > 0) {
-                lore.add("<gray>Failure penalty : <red>-" + obj.failPenalty() + " ELO</red>");
+                lore.add(failPenaltyFormat.replace("%elo%", String.valueOf(obj.failPenalty())));
             }
 
-            Material objMat = Material.PAPER;
-            if (obj.name().contains("xp")) {
-                objMat = Material.EXPERIENCE_BOTTLE;
-            } else if (obj.name().contains("lumens")) {
-                objMat = Material.GOLD_NUGGET;
+            Material objMat = null;
+            if (obj.material() != null) {
+                objMat = Material.matchMaterial(obj.material());
+            }
+            if (objMat == null) {
+                objMat = Material.PAPER;
+                if (obj.name().contains("xp")) {
+                    objMat = Material.EXPERIENCE_BOTTLE;
+                } else if (obj.name().contains("lumens")) {
+                    objMat = Material.GOLD_NUGGET;
+                }
             }
 
-            ItemStack objItem = MenuFactory.createItem(objMat, formattedName, lore);
-            inv.setItem(currentSlot, objItem);
-            currentSlot++;
+            Integer cmd = obj.customModelData();
+
+            ItemStack objItem = MenuFactory.createItem(objMat, formattedName, lore, cmd, null, null);
+            if (targetSlot >= 0 && targetSlot < size) {
+                inv.setItem(targetSlot, objItem);
+            }
         }
 
         player.openInventory(inv);

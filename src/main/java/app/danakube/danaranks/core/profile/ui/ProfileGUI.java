@@ -36,9 +36,7 @@ public class ProfileGUI {
         PlayerProfile profile = profileOpt.get();
 
         // 1. Bordure
-        Material borderMat = Material.matchMaterial(config.getString("menus.profile.items.border.material", "GRAY_STAINED_GLASS_PANE"));
-        if (borderMat == null) borderMat = Material.GRAY_STAINED_GLASS_PANE;
-        ItemStack borderItem = MenuFactory.createItem(borderMat, " ", null);
+        ItemStack borderItem = MenuFactory.loadItem(config.getConfigurationSection("menus.profile.items.border"), Material.GRAY_STAINED_GLASS_PANE);
         List<Integer> borderSlots = config.getIntegerList("menus.profile.items.border.slots");
         for (int slot : borderSlots) {
             if (slot >= 0 && slot < size) {
@@ -59,70 +57,109 @@ public class ProfileGUI {
 
         // 3. Tête de joueur (Slot 13)
         int headSlot = config.getInt("menus.profile.items.player-head.slot", 13);
-        String headName = config.getString("menus.profile.items.player-head.name", "<gold>%player%").replace("%player%", player.getName());
-        List<String> headLore = config.getStringList("menus.profile.items.player-head.lore");
-        List<String> formattedHeadLore = headLore.stream()
-                .map(line -> line.replace("%player%", player.getName())
-                        .replace("%rank%", String.valueOf(profile.getRankLevel()))
-                        .replace("%elo%", String.valueOf(profile.getElo()))
-                        .replace("%position%", positionStr))
-                .toList();
-        ItemStack headItem = MenuFactory.createItem(Material.PLAYER_HEAD, headName, formattedHeadLore);
+        Integer currentRankCmdVal = plugin.getRankCustomModelData(profile.getRankLevel());
+        String rankCmdStr = currentRankCmdVal != null ? String.valueOf(currentRankCmdVal) : "0";
+        ItemStack headItem = MenuFactory.loadItem(
+                config.getConfigurationSection("menus.profile.items.player-head"),
+                Material.PLAYER_HEAD,
+                Map.of(
+                        "%player%", player.getName(),
+                        "%rank%", plugin.getRankDisplayName(profile.getRankLevel()),
+                        "%elo%", String.valueOf(profile.getElo()),
+                        "%position%", positionStr,
+                        "%rank_cmd%", rankCmdStr
+                ),
+                player
+        );
         if (headSlot >= 0 && headSlot < size) {
             inv.setItem(headSlot, headItem);
         }
 
         // 4. Frise des Rangs (Option B)
-        int timelineRow = config.getInt("menus.profile.timeline.row", 2);
-        int startSlot = timelineRow * 9; // Ligne 3 = slots 18 à 26
         int currentRank = profile.getRankLevel();
 
         Material pastMat = Material.matchMaterial(config.getString("menus.profile.timeline.materials.past", "GRAY_DYE"));
         Material currentMat = Material.matchMaterial(config.getString("menus.profile.timeline.materials.current", "GOLD_BLOCK"));
         Material futureMat = Material.matchMaterial(config.getString("menus.profile.timeline.materials.future", "RED_DYE"));
+        Material customMat = Material.matchMaterial(config.getString("menus.profile.timeline.materials.custom", "PAPER"));
 
         if (pastMat == null) pastMat = Material.GRAY_DYE;
         if (currentMat == null) currentMat = Material.GOLD_BLOCK;
         if (futureMat == null) futureMat = Material.RED_DYE;
+        if (customMat == null) customMat = Material.PAPER;
 
-        for (int k = 0; k < 9; k++) {
-            int targetSlot = startSlot + k;
-            int rankForSlot;
-
-            if (currentRank <= 5) {
-                rankForSlot = 1 + k;
-            } else if (currentRank >= 46) {
-                rankForSlot = 42 + k;
+        List<String> timelineLore = new ArrayList<>();
+        if (config.contains("menus.profile.timeline.lore")) {
+            if (config.isList("menus.profile.timeline.lore")) {
+                timelineLore = config.getStringList("menus.profile.timeline.lore");
             } else {
-                rankForSlot = currentRank + (k - 4);
+                String singleLore = config.getString("menus.profile.timeline.lore");
+                if (singleLore != null && !singleLore.isEmpty()) {
+                    timelineLore = List.of(singleLore);
+                }
             }
+        } else {
+            timelineLore = List.of("<gray>Progression du parcours");
+        }
+
+        List<Integer> timelineSlots = config.getIntegerList("menus.profile.timeline.slots");
+        if (timelineSlots.isEmpty()) {
+            timelineSlots = new ArrayList<>();
+            int timelineRow = config.getInt("menus.profile.timeline.row", 2);
+            int startSlot = timelineRow * 9;
+            for (int k = 0; k < 9; k++) {
+                timelineSlots.add(startSlot + k);
+            }
+        }
+
+        int N = timelineSlots.size();
+        int currentSlotVal = config.getInt("menus.profile.timeline.current-slot", -1);
+        int currentSlotIdx = timelineSlots.indexOf(currentSlotVal);
+        if (currentSlotIdx == -1) {
+            currentSlotIdx = N / 2;
+        }
+
+        int startRank = currentRank - currentSlotIdx;
+
+        for (int k = 0; k < N; k++) {
+            int targetSlot = timelineSlots.get(k);
+            int rankForSlot = startRank + k;
 
             if (rankForSlot >= 1 && rankForSlot <= 50) {
                 Material itemMat;
+                String rankName = plugin.getRankDisplayName(rankForSlot);
                 String prefix;
                 if (rankForSlot < currentRank) {
                     itemMat = pastMat;
-                    prefix = "<gray>Rang " + rankForSlot + " (Validé)";
+                    prefix = "<gray>" + rankName + " (Validé)";
                 } else if (rankForSlot == currentRank) {
                     itemMat = currentMat;
-                    prefix = "<gold>Rang " + rankForSlot + " (Actuel)";
+                    prefix = "<gold>" + rankName + " (Actuel)";
                 } else {
                     itemMat = futureMat;
-                    prefix = "<red>Rang " + rankForSlot + " (Futur)";
+                    prefix = "<red>" + rankName + " (Futur)";
                 }
 
-                ItemStack timelineItem = MenuFactory.createItem(itemMat, prefix, List.of("<gray>Progression du parcours"));
-                inv.setItem(targetSlot, timelineItem);
+                Integer rankCmd = plugin.getRankCustomModelData(rankForSlot);
+                ItemStack timelineItem;
+                if (rankCmd != null) {
+                    timelineItem = MenuFactory.createItem(customMat, prefix, timelineLore, rankCmd, null, null);
+                } else {
+                    timelineItem = MenuFactory.createItem(itemMat, prefix, timelineLore);
+                }
+                if (targetSlot >= 0 && targetSlot < size) {
+                    inv.setItem(targetSlot, timelineItem);
+                }
+            } else {
+                if (targetSlot >= 0 && targetSlot < size) {
+                    inv.setItem(targetSlot, null);
+                }
             }
         }
 
         // 5. Bouton Historique (Slot 31)
         int historySlot = config.getInt("menus.profile.items.history-button.slot", 31);
-        Material historyMat = Material.matchMaterial(config.getString("menus.profile.items.history-button.material", "BOOK"));
-        if (historyMat == null) historyMat = Material.BOOK;
-        String historyName = config.getString("menus.profile.items.history-button.name", "<aqua>Historique d'ELO");
-        List<String> historyLore = config.getStringList("menus.profile.items.history-button.lore");
-        ItemStack historyItem = MenuFactory.createItem(historyMat, historyName, historyLore);
+        ItemStack historyItem = MenuFactory.loadItem(config.getConfigurationSection("menus.profile.items.history-button"), Material.BOOK);
         if (historySlot >= 0 && historySlot < size) {
             inv.setItem(historySlot, historyItem);
             holder.setAction(historySlot, event -> new HistoryGUI(plugin).open(player, 1));
@@ -130,11 +167,7 @@ public class ProfileGUI {
 
         // 6. Bouton Classement (Slot 33)
         int leaderboardSlot = config.getInt("menus.profile.items.leaderboard-button.slot", 33);
-        Material leaderboardMat = Material.matchMaterial(config.getString("menus.profile.items.leaderboard-button.material", "GOLD_INGOT"));
-        if (leaderboardMat == null) leaderboardMat = Material.GOLD_INGOT;
-        String leaderboardName = config.getString("menus.profile.items.leaderboard-button.name", "<gold>Classement Global");
-        List<String> leaderboardLore = config.getStringList("menus.profile.items.leaderboard-button.lore");
-        ItemStack leaderboardItem = MenuFactory.createItem(leaderboardMat, leaderboardName, leaderboardLore);
+        ItemStack leaderboardItem = MenuFactory.loadItem(config.getConfigurationSection("menus.profile.items.leaderboard-button"), Material.GOLD_INGOT);
         if (leaderboardSlot >= 0 && leaderboardSlot < size) {
             inv.setItem(leaderboardSlot, leaderboardItem);
             holder.setAction(leaderboardSlot, event -> new LeaderboardGUI(plugin).open(player, 0));
@@ -142,11 +175,7 @@ public class ProfileGUI {
 
         // 7. Bouton Quota (Slot 32)
         int quotaSlot = config.getInt("menus.profile.items.quota-button.slot", 32);
-        Material quotaMat = Material.matchMaterial(config.getString("menus.profile.items.quota-button.material", "CHEST"));
-        if (quotaMat == null) quotaMat = Material.CHEST;
-        String quotaName = config.getString("menus.profile.items.quota-button.name", "<green>Vos Quotas");
-        List<String> quotaLore = config.getStringList("menus.profile.items.quota-button.lore");
-        ItemStack quotaItem = MenuFactory.createItem(quotaMat, quotaName, quotaLore);
+        ItemStack quotaItem = MenuFactory.loadItem(config.getConfigurationSection("menus.profile.items.quota-button"), Material.CHEST);
         if (quotaSlot >= 0 && quotaSlot < size) {
             inv.setItem(quotaSlot, quotaItem);
             holder.setAction(quotaSlot, event -> new QuotaGUI(plugin).open(player));

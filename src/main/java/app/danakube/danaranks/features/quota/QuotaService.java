@@ -48,12 +48,8 @@ public class QuotaService {
     }
 
     public double getCycleFailurePenalty(int rank) {
-        double penalty = 0;
-        Map<String, ObjectiveConfig> objectives = QuotaConfigLoader.getObjectivesForRank(quotaConfig, rank);
-        for (ObjectiveConfig obj : objectives.values()) {
-            penalty += obj.failPenalty();
-        }
-        return penalty;
+        RankBracket bracket = QuotaConfigLoader.getBracketForRank(quotaConfig, rank);
+        return bracket.failPenalty();
     }
 
     public void handleOfflineCatchUp(PlayerProfile profile, Instant now) {
@@ -127,7 +123,6 @@ public class QuotaService {
     }
 
     public void processGlobalReset(PlayerProfile profile, Instant now) {
-        int activeRank = progressTracker.getActiveQuotaRank(profile);
         int level = getLevelFromRank(profile.getRankLevel());
 
         double totalSurplusElo = 0;

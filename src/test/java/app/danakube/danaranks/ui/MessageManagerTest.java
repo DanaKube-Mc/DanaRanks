@@ -27,11 +27,12 @@ public class MessageManagerTest {
         java.io.File expectedFile = new java.io.File(tempDir.toFile(), "lang/fr.yml");
         assertTrue(expectedFile.exists());
 
-        assertEquals("§c[DanaRanks] Impossible de charger vos données de rang. Veuillez vous reconnecter.",
+        String expectedPrefix = "§6§lD§6§la§6§ln§6§la§6§lK§6§lu§6§lb§e§le§r§l §7§l|§r ";
+        assertEquals(expectedPrefix + "§cImpossible de charger vos données de rang. Veuillez vous reconnecter.",
                 manager.getMessage("kick-database-error"));
-        assertEquals("§cVous n'avez pas la permission d'exécuter cette commande.",
+        assertEquals(expectedPrefix + "§cVous n'avez pas la permission d'exécuter cette commande.",
                 manager.getMessage("no-permission"));
-        assertEquals("§aVotre profil de rang a été correctement chargé !",
+        assertEquals(expectedPrefix + "§aVotre profil de rang a été correctement chargé !",
                 manager.getMessage("profile-loaded"));
 
         Component kickComponent = manager.getMessageComponent("kick-database-error");

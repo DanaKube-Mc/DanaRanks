@@ -3,6 +3,7 @@ package app.danakube.danaranks.features.leaderboard;
 import app.danakube.danaranks.core.DanaRanks;
 import app.danakube.danaranks.core.profile.ui.ProfileGUI;
 import app.danakube.danaranks.ui.shared.MenuFactory;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -37,9 +38,7 @@ public class LeaderboardGUI {
         Inventory inv = plugin.getMenuFactory().createInventory(title, size, holder);
 
         // 1. Bordure
-        Material borderMat = Material.matchMaterial(config.getString("menus.leaderboard.items.border.material", "GRAY_STAINED_GLASS_PANE"));
-        if (borderMat == null) borderMat = Material.GRAY_STAINED_GLASS_PANE;
-        ItemStack borderItem = MenuFactory.createItem(borderMat, " ", null);
+        ItemStack borderItem = MenuFactory.loadItem(config.getConfigurationSection("menus.leaderboard.items.border"), Material.GRAY_STAINED_GLASS_PANE);
         List<Integer> borderSlots = config.getIntegerList("menus.leaderboard.items.border.slots");
         for (int slot : borderSlots) {
             if (slot >= 0 && slot < size) {
@@ -49,13 +48,7 @@ public class LeaderboardGUI {
 
         // 2. Bouton retour (Slot 49)
         int backSlot = config.getInt("menus.leaderboard.items.profile-button.slot", 49);
-        Material backMat = Material.matchMaterial(config.getString("menus.leaderboard.items.profile-button.material", "BARRIER"));
-        if (backMat == null) backMat = Material.BARRIER;
-        ItemStack backItem = MenuFactory.createItem(
-                backMat,
-                config.getString("menus.leaderboard.items.profile-button.name", "<red>Retour au Profil"),
-                config.getStringList("menus.leaderboard.items.profile-button.lore")
-        );
+        ItemStack backItem = MenuFactory.loadItem(config.getConfigurationSection("menus.leaderboard.items.profile-button"), Material.BARRIER);
         if (backSlot >= 0 && backSlot < size) {
             inv.setItem(backSlot, backItem);
             holder.setAction(backSlot, event -> new ProfileGUI(plugin).open(player));
@@ -99,14 +92,35 @@ public class LeaderboardGUI {
             else if (rankNum == 2) mat = Material.IRON_BLOCK;
             else if (rankNum == 3) mat = Material.COPPER_BLOCK;
 
-            List<String> lore = new ArrayList<>();
-            lore.add("<gray>Grade : <gold>Rang " + entry.rankLevel() + "</gold>");
-            lore.add("<gray>ELO : <gold>" + entry.elo() + "/100</gold>");
+            String entryNameFormat = config.getString("menus.leaderboard.format.entry-name", "<gold>#%position% | %player%</gold>");
+            List<String> entryLoreFormat = config.getStringList("menus.leaderboard.format.entry-lore");
+            if (entryLoreFormat.isEmpty()) {
+                entryLoreFormat = List.of(
+                        "<gray>Grade : <gold>%rank%</gold>",
+                        "<gray>ELO : <gold>%elo%/100</gold>"
+                );
+            }
+
+            String name = entryNameFormat
+                    .replace("%position%", String.valueOf(rankNum))
+                    .replace("%player%", entry.playerName());
+
+            List<String> lore = entryLoreFormat.stream()
+                    .map(line -> line
+                            .replace("%position%", String.valueOf(rankNum))
+                            .replace("%player%", entry.playerName())
+                            .replace("%rank%", plugin.getRankDisplayName(entry.rankLevel()))
+                            .replace("%elo%", String.valueOf(entry.elo()))
+                    )
+                    .toList();
 
             ItemStack item = MenuFactory.createItem(
                     mat,
-                    "<gold>#" + rankNum + " | " + entry.playerName() + "</gold>",
-                    lore
+                    name,
+                    lore,
+                    null,
+                    null,
+                    Bukkit.getOfflinePlayer(entry.uuid())
             );
             inv.setItem(currentSlot++, item);
         }
@@ -116,17 +130,24 @@ public class LeaderboardGUI {
 
     private void setupFilterButton(Inventory inv, MenuFactory.CustomHolder holder, Player player, FileConfiguration config, String key, int targetLevel, int activeLevel) {
         int slot = config.getInt("menus.leaderboard.items." + key + ".slot");
-        Material mat = Material.matchMaterial(config.getString("menus.leaderboard.items." + key + ".material", "PAPER"));
+        org.bukkit.configuration.ConfigurationSection section = config.getConfigurationSection("menus.leaderboard.items." + key);
+        if (section == null) return;
+
+        String materialStr = section.getString("material");
+        Material mat = materialStr != null ? Material.matchMaterial(materialStr) : Material.PAPER;
         if (mat == null) mat = Material.PAPER;
-        String name = config.getString("menus.leaderboard.items." + key + ".name", "Filtre");
-        List<String> lore = new ArrayList<>(config.getStringList("menus.leaderboard.items." + key + ".lore"));
+
+        String name = section.getString("name", "Filtre");
+        List<String> lore = new ArrayList<>(section.getStringList("lore"));
+        Integer cmd = section.contains("custom-model-data") ? section.getInt("custom-model-data") : null;
+        String texture = section.getString("skull-texture");
 
         if (targetLevel == activeLevel) {
             name = name + " <green>(Actif)</green>";
             lore.add("<green>Filtre actif</green>");
         }
 
-        ItemStack item = MenuFactory.createItem(mat, name, lore);
+        ItemStack item = MenuFactory.createItem(mat, name, lore, cmd, texture, null);
         if (slot >= 0 && slot < inv.getSize()) {
             inv.setItem(slot, item);
             holder.setAction(slot, event -> open(player, targetLevel));

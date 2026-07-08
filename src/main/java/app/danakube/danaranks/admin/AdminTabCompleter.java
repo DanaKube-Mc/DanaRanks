@@ -29,7 +29,7 @@ public class AdminTabCompleter implements TabCompleter {
         }
 
         if (args.length == 2 && args[0].equalsIgnoreCase("admin")) {
-            List<String> list = List.of("setrank", "setelo", "addelo", "removeelo", "resetquota", "rush", "reload");
+            List<String> list = List.of("setrank", "setelo", "addelo", "removeelo", "resetquota", "forcequota", "rush", "reload");
             return filterCompletions(list, args[1]);
         }
 
@@ -37,7 +37,7 @@ public class AdminTabCompleter implements TabCompleter {
             String sub = args[1].toLowerCase();
             if (sub.equals("rush")) {
                 return filterCompletions(List.of("start", "stop", "end", "info", "add", "leave", "reload"), args[2]);
-            } else if (List.of("setrank", "setelo", "addelo", "removeelo", "resetquota").contains(sub)) {
+            } else if (List.of("setrank", "setelo", "addelo", "removeelo", "resetquota", "forcequota").contains(sub)) {
                 List<String> playerNames = new ArrayList<>();
                 for (Player player : Bukkit.getOnlinePlayers()) {
                     playerNames.add(player.getName());

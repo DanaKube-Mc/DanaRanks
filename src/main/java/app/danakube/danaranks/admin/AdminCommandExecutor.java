@@ -53,6 +53,9 @@ public class AdminCommandExecutor implements CommandExecutor {
             case "resetquota":
                 handleResetQuota(sender, args);
                 break;
+            case "forcequota":
+                handleForceQuota(sender, args);
+                break;
             case "rush":
                 handleRush(sender, args);
                 break;
@@ -223,7 +226,27 @@ public class AdminCommandExecutor implements CommandExecutor {
             int activeRank = plugin.getQuotaService().getProgressTracker().getActiveQuotaRank(profile);
             plugin.getQuotaService().getProgressTracker().resetQuotaProgress(profile, activeRank);
             sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-quota-reset-success",
-                    "<green>Quotas de %player% réinitialisés pour le rang actif %rank%.</green>", Map.of("%player%", targetName, "%rank%", String.valueOf(activeRank))));
+                    "<green>Quotas de %player% réinitialisés pour le rang actif %rank%.</green>", Map.of("%player%", targetName, "%rank%", plugin.getRankDisplayName(activeRank))));
+        }, sender);
+    }
+
+    private void handleForceQuota(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-usage-forcequota", "<red>Usage: /danaranks admin forcequota <joueur></red>"));
+            return;
+        }
+
+        String targetName = args[2];
+        getProfileOrLoad(targetName, profile -> {
+            plugin.getQuotaService().processGlobalReset(profile, Instant.now());
+            plugin.getProfileRepository().saveProfile(profile).thenRun(() -> {
+                sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-quota-forced-success",
+                        "<green>Cycle de quota pour %player% terminé et réinitialisé avec succès.</green>", Map.of("%player%", targetName)));
+            }).exceptionally(ex -> {
+                sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-db-save-error",
+                        "<red>Erreur lors de la sauvegarde : %error%</red>", Map.of("%error%", ex.getMessage())));
+                return null;
+            });
         }, sender);
     }
 
@@ -264,12 +287,12 @@ public class AdminCommandExecutor implements CommandExecutor {
                     plugin.getRushManager().forceScheduleRush(res, duration, delay);
                     sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-planned",
                             "<green>Rush planifié sur la ressource %resource% (durée: %duration%m) dans %delay% minutes.</green>",
-                            Map.of("%resource%", res, "%duration%", String.valueOf(duration), "%delay%", String.valueOf(delay))));
+                            Map.of("%resource%", plugin.getResourceDisplayName(res), "%duration%", String.valueOf(duration), "%delay%", String.valueOf(delay))));
                 } else {
                     plugin.getRushManager().forceStartRush(res, duration);
                     sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-started",
                             "<green>Rush forcé démarré sur la ressource %resource% pendant %duration% minutes.</green>",
-                            Map.of("%resource%", res, "%duration%", String.valueOf(duration))));
+                            Map.of("%resource%", plugin.getResourceDisplayName(res), "%duration%", String.valueOf(duration))));
                 }
                 break;
             case "stop":
@@ -359,6 +382,7 @@ public class AdminCommandExecutor implements CommandExecutor {
                 " - <white>/danaranks admin addelo <joueur> <valeur></white>\n" +
                 " - <white>/danaranks admin removeelo <joueur> <valeur></white>\n" +
                 " - <white>/danaranks admin resetquota <joueur></white>\n" +
+                " - <white>/danaranks admin forcequota <joueur></white>\n" +
                 " - <white>/danaranks admin rush start <ressource> <durée> [délai]</white>\n" +
                 " - <white>/danaranks admin rush stop</white>\n" +
                 " - <white>/danaranks admin rush end</white>\n" +

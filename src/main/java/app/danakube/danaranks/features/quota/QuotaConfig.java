@@ -1,5 +1,6 @@
 package app.danakube.danaranks.features.quota;
 
+import java.util.List;
 import java.util.Map;
 
 public record QuotaConfig(
@@ -7,9 +8,6 @@ public record QuotaConfig(
     double scalingMultiplierPerRank,
     String refDateStr,
     int resetHour,
-    int globalBaseElo,
-    int globalMaxSurplusElo,
-    int globalFailPenalty,
-    int maxObjectives,
+    List<RankBracket> rankBrackets,
     Map<String, ObjectiveConfig> baseObjectives
 ) {}

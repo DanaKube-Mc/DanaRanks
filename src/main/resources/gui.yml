@@ -1,13 +1,18 @@
 # Configuration des interfaces graphiques (GUIs)
 menus:
   quota:
-    title: "<dark_gray>Vos Quotas Périodiques"
+    title: "<dark_gray><b>Vos Quotas:</b>"
     size: 27
     objectives:
       format: "<yellow>%resource% : <gray>%bar% %progress%/%target% (<gold>%percentage%</gold>)"
       bar-symbol-filled: "█"
       bar-symbol-empty: "░"
       bar-size: 10
+    slots: [11, 12, 13, 14, 15, 16]
+    format:
+      base-reward: "<gray>Récompense de base : <gold>+%elo% ELO</gold></gray>"
+      max-surplus: "<gray>Surplus maximum : <gold>+%elo% ELO</gold></gray>"
+      fail-penalty: "<gray>Pénalité d'échec : <red>-%elo% ELO</red></gray>"
     items:
       clock:
         material: "CLOCK"
@@ -17,24 +22,29 @@ menus:
           - "<gray>Temps restant avant le reset :"
           - "<yellow>%time_remaining%"
       profile-button:
-        material: "BARRIER"
-        slot: 18
-        name: "<red>Retour au Profil"
+        material: "PLAYER_HEAD"
+        name: "<#ffeea2><b>Profile"
+        skull-texture: "%player%"
+        slot: 21
         lore:
-          - "<gray>Cliquez pour retourner à votre profil."
+          - "<#d4d9d8>Cliquez pour retourner à votre profil."
       border:
         material: "GRAY_STAINED_GLASS_PANE"
-        slots: [0, 1, 2, 3, 5, 6, 7, 8, 9, 17, 19, 20, 21, 23, 24, 25, 26]
+        slots: [0, 1, 2, 3, 5, 6, 7, 8, 9, 17, 19, 20, 23, 24, 25, 26]
 
   profile:
-    title: "<dark_gray>Profil de %player%"
+    title: "<dark_gray><b>%player%"
     size: 45
     timeline:
       row: 2 # Ligne 3 (slots 18 à 26)
       materials:
-        past: "GRAY_DYE"
-        current: "GOLD_BLOCK"
-        future: "RED_DYE"
+        past: "GRAY_STAINED_GLASS_PANE"
+        current: "LIME_STAINED_GLASS_PANE"
+        future: "RED_STAINED_GLASS_PANE"
+        custom: "PAPER"
+      slots: [10, 11, 12, 13, 14, 15, 16]
+      current-slot: 13
+      lore: "<gray>Progression du parcours"
     items:
       player-head:
         slot: 13
@@ -69,6 +79,11 @@ menus:
   leaderboard:
     title: "<dark_gray>Classement Global (Top 50)"
     size: 54
+    format:
+      entry-name: "<gold>#%position% | %player%</gold>"
+      entry-lore:
+        - "<gray>Grade : <gold>%rank%</gold>"
+        - "<gray>ELO : <gold>%elo%/100</gold>"
     items:
       profile-button:
         material: "BARRIER"
@@ -119,6 +134,9 @@ menus:
   history:
     title: "<dark_gray>Historique d'ELO de %player% (Page %page%)"
     size: 54
+    format:
+      entry: "<gray>• %time% | %description% : %color%%sign%%elo% ELO</gray>"
+      total: "<gray>Total Journée : <gold>%sign%%total% ELO</gold></gray>"
     items:
       prev-page:
         material: "ARROW"
