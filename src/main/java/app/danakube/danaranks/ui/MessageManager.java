@@ -98,6 +98,9 @@ public class MessageManager {
         if (raw == null) {
             raw = defaultValue;
         }
+        if (raw == null) {
+            return null;
+        }
         Component component = MiniMessage.miniMessage().deserialize(raw);
         return LegacyComponentSerializer.legacySection().serialize(component);
     }
@@ -111,6 +114,9 @@ public class MessageManager {
         if (raw == null) {
             raw = defaultValue;
         }
+        if (raw == null) {
+            return Component.empty();
+        }
         return MiniMessage.miniMessage().deserialize(raw);
     }
 
@@ -119,8 +125,13 @@ public class MessageManager {
         if (raw == null) {
             raw = defaultValue;
         }
-        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-            raw = raw.replace(entry.getKey(), entry.getValue());
+        if (raw == null) {
+            return Component.empty();
+        }
+        if (placeholders != null) {
+            for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+                raw = raw.replace(entry.getKey(), entry.getValue());
+            }
         }
         return MiniMessage.miniMessage().deserialize(raw);
     }
