@@ -266,12 +266,13 @@ public class QuotaProgressTracker {
 
 
         List<ObjectiveConfig> potential = new ArrayList<>();
+        RankBracket bracket = QuotaConfigLoader.getBracketForRank(quotaConfig, rank);
         for (ObjectiveConfig base : quotaConfig.baseObjectives().values()) {
             double scaledTarget = Math.round(base.target() * Math.pow(quotaConfig.scalingMultiplierPerRank(), rank - 1));
-            potential.add(new ObjectiveConfig(base.name(), scaledTarget, base.baseElo(), base.maxSurplusElo(), base.failPenalty()));
+            potential.add(new ObjectiveConfig(base.name(), scaledTarget, bracket.baseElo(), bracket.maxSurplusElo(), bracket.failPenalty(), base.material(), base.customModelData()));
         }
 
-        int maxObj = quotaConfig.maxObjectives();
+        int maxObj = bracket.maxObjectives();
         if (maxObj <= 0) {
             maxObj = potential.size();
         }
@@ -288,9 +289,9 @@ public class QuotaProgressTracker {
         }
 
         int activeCount = selected.size();
-        int baseEloEach = activeCount > 0 ? (int) Math.round((double) quotaConfig.globalBaseElo() / activeCount) : 0;
-        int maxSurplusEach = activeCount > 0 ? (int) Math.round((double) quotaConfig.globalMaxSurplusElo() / activeCount) : 0;
-        int failPenaltyEach = activeCount > 0 ? (int) Math.round((double) quotaConfig.globalFailPenalty() / activeCount) : 0;
+        int baseEloEach = activeCount > 0 ? (int) Math.round((double) bracket.baseElo() / activeCount) : 0;
+        int maxSurplusEach = activeCount > 0 ? (int) Math.round((double) bracket.maxSurplusElo() / activeCount) : 0;
+        int failPenaltyEach = activeCount > 0 ? (int) Math.round((double) bracket.failPenalty() / activeCount) : 0;
 
         Map<String, Map<String, Object>> activeMap = new HashMap<>();
         for (ObjectiveConfig obj : selected) {

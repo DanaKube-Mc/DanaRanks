@@ -42,12 +42,37 @@ quotas-settings:
   scaling:
     multiplier-per-rank: 1.22 # +22% de quantité par rang
   # Quota de base pour le Rang 1 (Fer I, Période = 1 jour, pas de pénalité donc fail-penalty = 0)
-  base-rank-1:
-    # Paramètres ELO globaux et nombre d'objectifs max pour ce rang
-    base-elo: 10
-    max-surplus-elo: 20
-    fail-penalty: 0
-    max-objectives: 2
+  ranks:
+    1-10:
+      # Paramètres ELO globaux et nombre d'objectifs max pour ce rang
+      base-elo: 10
+      max-surplus-elo: 20
+      fail-penalty: 0
+      max-objectives: 2
+    11-20:
+      # Paramètres ELO globaux et nombre d'objectifs max pour ce rang
+      base-elo: 10
+      max-surplus-elo: 20
+      fail-penalty: 5
+      max-objectives: 3
+    21-30:
+      # Paramètres ELO globaux et nombre d'objectifs max pour ce rang
+      base-elo: 10
+      max-surplus-elo: 20
+      fail-penalty: 10
+      max-objectives: 4
+    31-40:
+      # Paramètres ELO globaux et nombre d'objectifs max pour ce rang
+      base-elo: 0
+      max-surplus-elo: 30
+      fail-penalty: 20
+      max-objectives: 4
+    41-50:
+      # Paramètres ELO globaux et nombre d'objectifs max pour ce rang
+      base-elo: 0
+      max-surplus-elo: 40
+      fail-penalty: 25
+      max-objectives: 4
 
     # Les objectifs actifs du rang 1 et leurs cibles de départ sont désormais configurés
     # de façon centralisée dans la section 'resources' au bas de ce fichier.
@@ -78,6 +103,11 @@ rush:
     - "lumens-gained"
     - "lumens-spent"
     - "job-xp-all"
+    - "job-xp-mineur"
+    - "job-xp-bucheron"
+    - "job-xp-fermier"
+    - "job-xp-pecheur"
+    - "job-xp-traqueur"
     - "tool-xp"
     - "vanilla-xp-gained"
     - "vanilla-xp-spent"
@@ -239,69 +269,43 @@ resources:
     name: "XP Vanilla (Gagnée)"
     material: "EXPERIENCE_BOTTLE"
     target: 500
-    base-elo: 5
-    max-surplus-elo: 10
-    fail-penalty: 0
   vanilla-xp-spent:
     name: "XP Vanilla (Consommée)"
     material: "EXPERIENCE_BOTTLE"
     target: 300
-    base-elo: 5
-    max-surplus-elo: 10
-    fail-penalty: 0
   lumens-gained:
     name: "Lumens Gagnés"
     material: "GOLD_NUGGET"
     target: 1000
-    base-elo: 5
-    max-surplus-elo: 10
-    fail-penalty: 0
   lumens-spent:
     name: "Lumens Dépensés"
     material: "GOLD_NUGGET"
     target: 800
-    base-elo: 5
-    max-surplus-elo: 10
-    fail-penalty: 0
   job-xp-all:
     name: "Toutes XP Métiers"
     material: "DIAMOND_PICKAXE"
     target: 500
-    base-elo: 5
-    max-surplus-elo: 10
-    fail-penalty: 0
   tool-xp:
     name: "XP Outils"
     material: "GOLDEN_SWORD"
     target: 1000
-    base-elo: 5
-    max-surplus-elo: 10
-    fail-penalty: 0
   job-xp-mineur:
     name: "XP Métier Mineur"
     material: "IRON_PICKAXE"
     target: 500
-    base-elo: 5
-    max-surplus-elo: 10
-    fail-penalty: 0
   job-xp-bucheron:
     name: "XP Métier Bûcheron"
     material: "IRON_AXE"
     target: 500
-    base-elo: 5
-    max-surplus-elo: 10
-    fail-penalty: 0
   job-xp-fermier:
     name: "XP Métier Fermier"
     material: "IRON_HOE"
     target: 500
-    base-elo: 5
-    max-surplus-elo: 10
-    fail-penalty: 0
   job-xp-pecheur:
     name: "XP Métier Pêcheur"
     material: "FISHING_ROD"
     target: 500
-    base-elo: 5
-    max-surplus-elo: 10
-    fail-penalty: 0
+  job-xp-traqueur:
+    name: "XP Métier Traqueur"
+    material: "FISHING_ROD"
+    target: 500

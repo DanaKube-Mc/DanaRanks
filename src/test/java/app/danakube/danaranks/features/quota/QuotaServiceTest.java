@@ -41,9 +41,11 @@ public class QuotaServiceTest {
         QuotaService qm = new QuotaService(eloService, progressTracker);
         
         YamlConfiguration config = new YamlConfiguration();
+        config.set("quotas-settings.ranks.1-50.base-elo", 5);
+        config.set("quotas-settings.ranks.1-50.max-surplus-elo", 10);
+        config.set("quotas-settings.ranks.1-50.fail-penalty", 0);
+        config.set("quotas-settings.ranks.1-50.max-objectives", 1);
         config.set("quotas-settings.base-rank-1.objectives.lumens-gained.target", 1000);
-        config.set("quotas-settings.base-rank-1.objectives.lumens-gained.base-elo", 5);
-        config.set("quotas-settings.base-rank-1.objectives.lumens-gained.max-surplus-elo", 10);
         qm.loadConfig(config, null);
 
         PlayerProfile profile = PlayerProfileBuilder.aProfile().name("Player1").rank(1).elo(0).build();
@@ -72,9 +74,11 @@ public class QuotaServiceTest {
         QuotaService qm = new QuotaService(eloService, progressTracker);
         
         YamlConfiguration config = new YamlConfiguration();
+        config.set("quotas-settings.ranks.1-50.base-elo", 5);
+        config.set("quotas-settings.ranks.1-50.max-surplus-elo", 10);
+        config.set("quotas-settings.ranks.1-50.fail-penalty", 0);
+        config.set("quotas-settings.ranks.1-50.max-objectives", 1);
         config.set("quotas-settings.base-rank-1.objectives.lumens-gained.target", 1000);
-        config.set("quotas-settings.base-rank-1.objectives.lumens-gained.base-elo", 5);
-        config.set("quotas-settings.base-rank-1.objectives.lumens-gained.max-surplus-elo", 10);
         config.set("quotas-settings.surplus-multiplier", 10.0);
         qm.loadConfig(config, null);
 
@@ -128,9 +132,11 @@ public class QuotaServiceTest {
         QuotaService qm = new QuotaService(eloService, progressTracker);
         
         YamlConfiguration config = new YamlConfiguration();
+        config.set("quotas-settings.ranks.1-50.base-elo", 5);
+        config.set("quotas-settings.ranks.1-50.max-surplus-elo", 10);
+        config.set("quotas-settings.ranks.1-50.fail-penalty", 10);
+        config.set("quotas-settings.ranks.1-50.max-objectives", 1);
         config.set("quotas-settings.base-rank-1.objectives.job-xp.target", 1000);
-        config.set("quotas-settings.base-rank-1.objectives.job-xp.base-elo", 5);
-        config.set("quotas-settings.base-rank-1.objectives.job-xp.fail-penalty", 10);
         qm.loadConfig(config, null);
 
         PlayerProfile profile1 = PlayerProfileBuilder.aProfile().name("Player4").rank(21).elo(50).build();
@@ -186,10 +192,12 @@ public class QuotaServiceTest {
         YamlConfiguration config = new YamlConfiguration();
         config.set("reset.reference-date", "2026-07-03");
         config.set("reset.hour", 4);
+        config.set("quotas-settings.ranks.1-50.base-elo", 10);
+        config.set("quotas-settings.ranks.1-50.max-surplus-elo", 20);
+        config.set("quotas-settings.ranks.1-50.fail-penalty", 10);
+        config.set("quotas-settings.ranks.1-50.max-objectives", 2);
         config.set("quotas-settings.base-rank-1.objectives.lumens-gained.target", 1000);
-        config.set("quotas-settings.base-rank-1.objectives.lumens-gained.fail-penalty", 5);
         config.set("quotas-settings.base-rank-1.objectives.job-xp.target", 500);
-        config.set("quotas-settings.base-rank-1.objectives.job-xp.fail-penalty", 5);
         qm.loadConfig(config, null);
 
         PlayerProfile profile = PlayerProfileBuilder.aProfile().name("PlayerOffline").rank(21).elo(25).build();
@@ -220,10 +228,12 @@ public class QuotaServiceTest {
         YamlConfiguration config = new YamlConfiguration();
         config.set("reset.reference-date", "2026-07-03");
         config.set("reset.hour", 4);
+        config.set("quotas-settings.ranks.1-50.base-elo", 10);
+        config.set("quotas-settings.ranks.1-50.max-surplus-elo", 20);
+        config.set("quotas-settings.ranks.1-50.fail-penalty", 10);
+        config.set("quotas-settings.ranks.1-50.max-objectives", 2);
         config.set("quotas-settings.base-rank-1.objectives.lumens-gained.target", 1000);
-        config.set("quotas-settings.base-rank-1.objectives.lumens-gained.fail-penalty", 5);
         config.set("quotas-settings.base-rank-1.objectives.job-xp.target", 500);
-        config.set("quotas-settings.base-rank-1.objectives.job-xp.fail-penalty", 5);
         qm.loadConfig(config, null);
 
         PlayerProfile profile = PlayerProfileBuilder.aProfile().name("PrestigePlayer").rank(50).elo(90).build();
