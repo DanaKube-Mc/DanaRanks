@@ -90,12 +90,26 @@ public class QuotaGUI {
         String barSymbolEmpty = config.getString("menus.quota.objectives.bar-symbol-empty", "░");
         int barSize = config.getInt("menus.quota.objectives.bar-size", 10);
 
+        List<Integer> objectiveSlots = config.getIntegerList("menus.quota.slots");
+        if (objectiveSlots.isEmpty()) objectiveSlots = config.getIntegerList("menus.quota.slot");
+        if (objectiveSlots.isEmpty()) objectiveSlots = config.getIntegerList("menus.quota.objectives.slots");
+        if (objectiveSlots.isEmpty()) objectiveSlots = config.getIntegerList("menus.quota.objectives.slot");
+
+        int objIdx = 0;
         int currentSlot = 0;
+
         for (ObjectiveConfig obj : objectives.values()) {
-            while (currentSlot < size && (borderSlots.contains(currentSlot) || currentSlot == clockSlot || currentSlot == profileButtonSlot)) {
-                currentSlot++;
+            int targetSlot;
+            if (!objectiveSlots.isEmpty()) {
+                if (objIdx >= objectiveSlots.size()) break;
+                targetSlot = objectiveSlots.get(objIdx++);
+            } else {
+                while (currentSlot < size && (borderSlots.contains(currentSlot) || currentSlot == clockSlot || currentSlot == profileButtonSlot)) {
+                    currentSlot++;
+                }
+                if (currentSlot >= size) break;
+                targetSlot = currentSlot++;
             }
-            if (currentSlot >= size) break;
 
             double progress = plugin.getQuotaService().getProgressTracker().getProgress(profile, obj.name());
             double target = obj.target();
@@ -122,16 +136,25 @@ public class QuotaGUI {
                 lore.add(failPenaltyFormat.replace("%elo%", String.valueOf(obj.failPenalty())));
             }
 
-            Material objMat = Material.PAPER;
-            if (obj.name().contains("xp")) {
-                objMat = Material.EXPERIENCE_BOTTLE;
-            } else if (obj.name().contains("lumens")) {
-                objMat = Material.GOLD_NUGGET;
+            Material objMat = null;
+            if (obj.material() != null) {
+                objMat = Material.matchMaterial(obj.material());
+            }
+            if (objMat == null) {
+                objMat = Material.PAPER;
+                if (obj.name().contains("xp")) {
+                    objMat = Material.EXPERIENCE_BOTTLE;
+                } else if (obj.name().contains("lumens")) {
+                    objMat = Material.GOLD_NUGGET;
+                }
             }
 
-            ItemStack objItem = MenuFactory.createItem(objMat, formattedName, lore);
-            inv.setItem(currentSlot, objItem);
-            currentSlot++;
+            Integer cmd = obj.customModelData();
+
+            ItemStack objItem = MenuFactory.createItem(objMat, formattedName, lore, cmd, null, null);
+            if (targetSlot >= 0 && targetSlot < size) {
+                inv.setItem(targetSlot, objItem);
+            }
         }
 
         player.openInventory(inv);

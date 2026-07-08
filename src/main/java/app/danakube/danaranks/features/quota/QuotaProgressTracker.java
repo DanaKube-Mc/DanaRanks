@@ -212,7 +212,18 @@ public class QuotaProgressTracker {
                 int maxSurplusElo = ((Number) objData.get("maxSurplusElo")).intValue();
                 int failPenalty = ((Number) objData.get("failPenalty")).intValue();
 
-                result.put(name, new ObjectiveConfig(name, target, baseElo, maxSurplusElo, failPenalty));
+                String normalized = name.replace("-", "_");
+                String material = null;
+                Integer cmd = null;
+                if (quotaService != null && quotaService.getQuotaConfig() != null) {
+                    ObjectiveConfig base = quotaService.getQuotaConfig().baseObjectives().get(normalized);
+                    if (base != null) {
+                        material = base.material();
+                        cmd = base.customModelData();
+                    }
+                }
+
+                result.put(name, new ObjectiveConfig(name, target, baseElo, maxSurplusElo, failPenalty, material, cmd));
             }
             return result;
         }

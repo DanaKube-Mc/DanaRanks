@@ -67,7 +67,66 @@ public class QuotaConfigLoader {
         int maxObjectives = config.getInt("quotas-settings.base-rank-1.max-objectives",
                 config.getInt("quotas-settings.base-rank-1.nb-objectifs-max", -1));
 
-        if (config.contains("quotas-settings.base-rank-1.objectives")) {
+        ConfigurationSection resourcesSection = config.getConfigurationSection("resources");
+        if (resourcesSection == null) {
+            resourcesSection = config.getConfigurationSection("ressources");
+        }
+
+        if (resourcesSection != null) {
+            baseObjectives.clear();
+            int sumBaseElo = 0;
+            int sumMaxSurplus = 0;
+            int sumFailPen = 0;
+            boolean hasIndividualElo = false;
+
+            for (String key : resourcesSection.getKeys(false)) {
+                ConfigurationSection itemSec = resourcesSection.getConfigurationSection(key);
+                if (itemSec == null) continue;
+
+                double target = itemSec.getDouble("target", 1000);
+                int baseElo = itemSec.getInt("base-elo", -1);
+                if (baseElo == -1) baseElo = itemSec.getInt("base_elo", -1);
+
+                int maxSurplus = itemSec.getInt("max-surplus-elo", -1);
+                if (maxSurplus == -1) maxSurplus = itemSec.getInt("max_surplus_elo", -1);
+
+                int failPen = itemSec.getInt("fail-penalty", -1);
+                if (failPen == -1) failPen = itemSec.getInt("fail_penalty", -1);
+
+                String material = itemSec.getString("material");
+                if (material == null) material = itemSec.getString("mateiral");
+
+                Integer cmd = itemSec.contains("custom-model-data") ? itemSec.getInt("custom-model-data") : null;
+                if (cmd == null) {
+                    cmd = itemSec.contains("custom_model_data") ? itemSec.getInt("custom_model_data") : null;
+                }
+
+                if (baseElo != -1 || maxSurplus != -1 || failPen != -1) {
+                    hasIndividualElo = true;
+                }
+
+                int finalBaseElo = baseElo != -1 ? baseElo : 5;
+                int finalMaxSurplus = maxSurplus != -1 ? maxSurplus : 10;
+                int finalFailPen = failPen != -1 ? failPen : 0;
+
+                sumBaseElo += finalBaseElo;
+                sumMaxSurplus += finalMaxSurplus;
+                sumFailPen += finalFailPen;
+
+                String normalizedKey = key.replace("-", "_");
+                baseObjectives.put(normalizedKey, new ObjectiveConfig(normalizedKey, target, finalBaseElo, finalMaxSurplus, finalFailPen, material, cmd));
+            }
+
+            if (globalBaseElo == -1) {
+                globalBaseElo = hasIndividualElo ? sumBaseElo : 10;
+            }
+            if (globalMaxSurplusElo == -1) {
+                globalMaxSurplusElo = hasIndividualElo ? sumMaxSurplus : 20;
+            }
+            if (globalFailPenalty == -1) {
+                globalFailPenalty = hasIndividualElo ? sumFailPen : 0;
+            }
+        } else if (config.contains("quotas-settings.base-rank-1.objectives")) {
             baseObjectives.clear();
             ConfigurationSection section = config.getConfigurationSection("quotas-settings.base-rank-1.objectives");
             if (section != null) {
@@ -123,7 +182,7 @@ public class QuotaConfigLoader {
         Map<String, ObjectiveConfig> map = new HashMap<>();
         for (ObjectiveConfig base : quotaConfig.baseObjectives().values()) {
             double scaledTarget = Math.round(base.target() * Math.pow(quotaConfig.scalingMultiplierPerRank(), rank - 1));
-            map.put(base.name(), new ObjectiveConfig(base.name(), scaledTarget, base.baseElo(), base.maxSurplusElo(), base.failPenalty()));
+            map.put(base.name(), new ObjectiveConfig(base.name(), scaledTarget, base.baseElo(), base.maxSurplusElo(), base.failPenalty(), base.material(), base.customModelData()));
         }
         return map;
     }
@@ -133,6 +192,6 @@ public class QuotaConfigLoader {
         ObjectiveConfig base = quotaConfig.baseObjectives().get(normalizedResource);
         if (base == null) return null;
         double scaledTarget = Math.round(base.target() * Math.pow(quotaConfig.scalingMultiplierPerRank(), rank - 1));
-        return new ObjectiveConfig(base.name(), scaledTarget, base.baseElo(), base.maxSurplusElo(), base.failPenalty());
+        return new ObjectiveConfig(base.name(), scaledTarget, base.baseElo(), base.maxSurplusElo(), base.failPenalty(), base.material(), base.customModelData());
     }
 }

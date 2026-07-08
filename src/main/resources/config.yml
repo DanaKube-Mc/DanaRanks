@@ -49,12 +49,8 @@ quotas-settings:
     fail-penalty: 0
     max-objectives: 2
 
-    # Liste de tous les objectifs disponibles pour ce rang
-    objectives:
-      lumens-gained:
-        target: 1000
-      job-xp-all:
-        target: 500
+    # Les objectifs actifs du rang 1 et leurs cibles de départ sont désormais configurés
+    # de façon centralisée dans la section 'resources' au bas de ce fichier.
 
 # Configuration du Rush Quotidien
 rush:
@@ -237,4 +233,75 @@ rank-custom-model-data:
   49: 10048
   50: 10049
 
-
+# Centralisation de toutes les ressources (quotas, Rush, et interfaces graphiques)
+resources:
+  vanilla-xp-gained:
+    name: "XP Vanilla (Gagnée)"
+    material: "EXPERIENCE_BOTTLE"
+    target: 500
+    base-elo: 5
+    max-surplus-elo: 10
+    fail-penalty: 0
+  vanilla-xp-spent:
+    name: "XP Vanilla (Consommée)"
+    material: "EXPERIENCE_BOTTLE"
+    target: 300
+    base-elo: 5
+    max-surplus-elo: 10
+    fail-penalty: 0
+  lumens-gained:
+    name: "Lumens Gagnés"
+    material: "GOLD_NUGGET"
+    target: 1000
+    base-elo: 5
+    max-surplus-elo: 10
+    fail-penalty: 0
+  lumens-spent:
+    name: "Lumens Dépensés"
+    material: "GOLD_NUGGET"
+    target: 800
+    base-elo: 5
+    max-surplus-elo: 10
+    fail-penalty: 0
+  job-xp-all:
+    name: "Toutes XP Métiers"
+    material: "DIAMOND_PICKAXE"
+    target: 500
+    base-elo: 5
+    max-surplus-elo: 10
+    fail-penalty: 0
+  tool-xp:
+    name: "XP Outils"
+    material: "GOLDEN_SWORD"
+    target: 1000
+    base-elo: 5
+    max-surplus-elo: 10
+    fail-penalty: 0
+  job-xp-mineur:
+    name: "XP Métier Mineur"
+    material: "IRON_PICKAXE"
+    target: 500
+    base-elo: 5
+    max-surplus-elo: 10
+    fail-penalty: 0
+  job-xp-bucheron:
+    name: "XP Métier Bûcheron"
+    material: "IRON_AXE"
+    target: 500
+    base-elo: 5
+    max-surplus-elo: 10
+    fail-penalty: 0
+  job-xp-fermier:
+    name: "XP Métier Fermier"
+    material: "IRON_HOE"
+    target: 500
+    base-elo: 5
+    max-surplus-elo: 10
+    fail-penalty: 0
+  job-xp-pecheur:
+    name: "XP Métier Pêcheur"
+    material: "FISHING_ROD"
+    target: 500
+    base-elo: 5
+    max-surplus-elo: 10
+    fail-penalty: 0

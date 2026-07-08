@@ -279,6 +279,17 @@ public final class DanaRanks extends JavaPlugin {
         if (translated != null && !translated.isEmpty()) {
             return translated;
         }
+        FileConfiguration config = getConfig();
+        String normalized = resourceId.replace("-", "_");
+        for (String sectionName : java.util.List.of("resources", "ressources")) {
+            if (config.contains(sectionName + "." + normalized + ".name")) {
+                return config.getString(sectionName + "." + normalized + ".name");
+            }
+            String dashKey = resourceId.replace("_", "-");
+            if (config.contains(sectionName + "." + dashKey + ".name")) {
+                return config.getString(sectionName + "." + dashKey + ".name");
+            }
+        }
         return resourceId;
     }
 }
