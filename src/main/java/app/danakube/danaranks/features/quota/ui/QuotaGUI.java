@@ -35,9 +35,8 @@ public class QuotaGUI {
         if (profileOpt.isEmpty()) return;
         PlayerProfile profile = profileOpt.get();
 
-        Material borderMat = Material.matchMaterial(config.getString("menus.quota.items.border.material", "GRAY_STAINED_GLASS_PANE"));
-        if (borderMat == null) borderMat = Material.GRAY_STAINED_GLASS_PANE;
-        ItemStack borderItem = MenuFactory.createItem(borderMat, " ", null);
+        // 1. Bordure
+        ItemStack borderItem = MenuFactory.loadItem(config.getConfigurationSection("menus.quota.items.border"), Material.GRAY_STAINED_GLASS_PANE);
         List<Integer> borderSlots = config.getIntegerList("menus.quota.items.border.slots");
         for (int slot : borderSlots) {
             if (slot >= 0 && slot < size) {
@@ -45,8 +44,6 @@ public class QuotaGUI {
             }
         }
 
-        Material clockMat = Material.matchMaterial(config.getString("menus.quota.items.clock.material", "CLOCK"));
-        if (clockMat == null) clockMat = Material.CLOCK;
         int clockSlot = config.getInt("menus.quota.items.clock.slot", 22);
 
         int periodDays = plugin.getQuotaService().getQuotaScheduler().getPeriodDays(plugin.getQuotaService().getLevelFromRank(profile.getRankLevel()));
@@ -63,23 +60,22 @@ public class QuotaGUI {
             timeRemaining = String.format("%02dh %02dm %02ds", hours, minutes, seconds);
         }
 
-        String clockName = config.getString("menus.quota.items.clock.name", "<aqua>Temps restant").replace("%time_remaining%", timeRemaining);
-        List<String> clockLore = config.getStringList("menus.quota.items.clock.lore");
-        List<String> formattedClockLore = clockLore.stream()
-                .map(line -> line.replace("%time_remaining%", timeRemaining))
-                .toList();
-        ItemStack clockItem = MenuFactory.createItem(clockMat, clockName, formattedClockLore);
+        ItemStack clockItem = MenuFactory.loadItem(
+                config.getConfigurationSection("menus.quota.items.clock"),
+                Material.CLOCK,
+                Map.of("%time_remaining%", timeRemaining),
+                null
+        );
         if (clockSlot >= 0 && clockSlot < size) {
             inv.setItem(clockSlot, clockItem);
         }
 
         // Bouton retour profile (Slot 18 par défaut)
         int profileButtonSlot = config.getInt("menus.quota.items.profile-button.slot", 18);
-        Material profileButtonMat = Material.matchMaterial(config.getString("menus.quota.items.profile-button.material", "BARRIER"));
-        if (profileButtonMat == null) profileButtonMat = Material.BARRIER;
-        String profileButtonName = config.getString("menus.quota.items.profile-button.name", "<red>Retour au Profil");
-        List<String> profileButtonLore = config.getStringList("menus.quota.items.profile-button.lore");
-        ItemStack profileButtonItem = MenuFactory.createItem(profileButtonMat, profileButtonName, profileButtonLore);
+        ItemStack profileButtonItem = MenuFactory.loadItem(
+                config.getConfigurationSection("menus.quota.items.profile-button"),
+                Material.BARRIER
+        );
         if (profileButtonSlot >= 0 && profileButtonSlot < size) {
             inv.setItem(profileButtonSlot, profileButtonItem);
             holder.setAction(profileButtonSlot, event -> new ProfileGUI(plugin).open(player));

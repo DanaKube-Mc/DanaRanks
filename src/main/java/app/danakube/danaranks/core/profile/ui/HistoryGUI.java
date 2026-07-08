@@ -35,9 +35,7 @@ public class HistoryGUI {
         Inventory inv = plugin.getMenuFactory().createInventory(title, size, holder);
 
         // 1. Bordure
-        Material borderMat = Material.matchMaterial(config.getString("menus.history.items.border.material", "GRAY_STAINED_GLASS_PANE"));
-        if (borderMat == null) borderMat = Material.GRAY_STAINED_GLASS_PANE;
-        ItemStack borderItem = MenuFactory.createItem(borderMat, " ", null);
+        ItemStack borderItem = MenuFactory.loadItem(config.getConfigurationSection("menus.history.items.border"), Material.GRAY_STAINED_GLASS_PANE);
         List<Integer> borderSlots = config.getIntegerList("menus.history.items.border.slots");
         for (int slot : borderSlots) {
             if (slot >= 0 && slot < size) {
@@ -115,9 +113,7 @@ public class HistoryGUI {
             // Page précédente (Slot 47)
             if (finalPage > 1) {
                 int prevSlot = config.getInt("menus.history.items.prev-page.slot", 47);
-                Material prevMat = Material.matchMaterial(config.getString("menus.history.items.prev-page.material", "ARROW"));
-                if (prevMat == null) prevMat = Material.ARROW;
-                ItemStack prevItem = MenuFactory.createItem(prevMat, config.getString("menus.history.items.prev-page.name", "<yellow>Page Précédente"), config.getStringList("menus.history.items.prev-page.lore"));
+                ItemStack prevItem = MenuFactory.loadItem(config.getConfigurationSection("menus.history.items.prev-page"), Material.ARROW);
                 inv.setItem(prevSlot, prevItem);
                 int finalPrevPage = finalPage - 1;
                 holder.setAction(prevSlot, event -> open(player, finalPrevPage));
@@ -126,9 +122,7 @@ public class HistoryGUI {
             // Page suivante (Slot 51)
             if (finalPage < totalPages) {
                 int nextSlot = config.getInt("menus.history.items.next-page.slot", 51);
-                Material nextMat = Material.matchMaterial(config.getString("menus.history.items.next-page.material", "ARROW"));
-                if (nextMat == null) nextMat = Material.ARROW;
-                ItemStack nextItem = MenuFactory.createItem(nextMat, config.getString("menus.history.items.next-page.name", "<yellow>Page Suivante"), config.getStringList("menus.history.items.next-page.lore"));
+                ItemStack nextItem = MenuFactory.loadItem(config.getConfigurationSection("menus.history.items.next-page"), Material.ARROW);
                 inv.setItem(nextSlot, nextItem);
                 int finalNextPage = finalPage + 1;
                 holder.setAction(nextSlot, event -> open(player, finalNextPage));
@@ -136,9 +130,7 @@ public class HistoryGUI {
 
             // Retour au Profil (Slot 49)
             int backSlot = config.getInt("menus.history.items.back-profile.slot", 49);
-            Material backMat = Material.matchMaterial(config.getString("menus.history.items.back-profile.material", "BARRIER"));
-            if (backMat == null) backMat = Material.BARRIER;
-            ItemStack backItem = MenuFactory.createItem(backMat, config.getString("menus.history.items.back-profile.name", "<red>Retour au Profil"), config.getStringList("menus.history.items.back-profile.lore"));
+            ItemStack backItem = MenuFactory.loadItem(config.getConfigurationSection("menus.history.items.back-profile"), Material.BARRIER);
             inv.setItem(backSlot, backItem);
             holder.setAction(backSlot, event -> new ProfileGUI(plugin).open(player));
 

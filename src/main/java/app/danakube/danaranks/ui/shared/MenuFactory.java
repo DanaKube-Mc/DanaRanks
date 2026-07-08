@@ -55,13 +55,19 @@ public class MenuFactory implements Listener {
     }
 
     public static ItemStack createItem(Material material, String name, List<String> lore) {
+        return createItem(material, name, lore, null, null, null);
+    }
+
+    public static ItemStack createItem(Material material, String name, List<String> lore, Integer customModelData, String skullTexture, org.bukkit.OfflinePlayer skullOwner) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            Component nameComponent = MiniMessage.miniMessage()
-                    .deserialize(name)
-                    .decoration(TextDecoration.ITALIC, false);
-            meta.displayName(nameComponent);
+            if (name != null && !name.isEmpty()) {
+                Component nameComponent = MiniMessage.miniMessage()
+                        .deserialize(name)
+                        .decoration(TextDecoration.ITALIC, false);
+                meta.displayName(nameComponent);
+            }
             if (lore != null) {
                 List<Component> serializedLore = lore.stream()
                         .map(line -> MiniMessage.miniMessage()
@@ -70,9 +76,68 @@ public class MenuFactory implements Listener {
                         .toList();
                 meta.lore(serializedLore);
             }
+            if (customModelData != null) {
+                meta.setCustomModelData(customModelData);
+            }
+            if (material == Material.PLAYER_HEAD && meta instanceof org.bukkit.inventory.meta.SkullMeta skullMeta) {
+                if (skullTexture != null && !skullTexture.isEmpty()) {
+                    String base64Texture;
+                    if (skullTexture.startsWith("http://") || skullTexture.startsWith("https://")) {
+                        String json = "{\"textures\":{\"SKIN\":{\"url\":\"" + skullTexture + "\"}}}";
+                        base64Texture = java.util.Base64.getEncoder().encodeToString(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    } else {
+                        base64Texture = skullTexture;
+                    }
+                    try {
+                        com.destroystokyo.paper.profile.PlayerProfile profile = Bukkit.createProfile(java.util.UUID.randomUUID(), null);
+                        profile.setProperty(new com.destroystokyo.paper.profile.ProfileProperty("textures", base64Texture));
+                        skullMeta.setPlayerProfile(profile);
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                } else if (skullOwner != null) {
+                    skullMeta.setOwningPlayer(skullOwner);
+                }
+            }
             item.setItemMeta(meta);
         }
         return item;
+    }
+
+    public static ItemStack loadItem(org.bukkit.configuration.ConfigurationSection section, Material defaultMaterial) {
+        return loadItem(section, defaultMaterial, null, null);
+    }
+
+    public static ItemStack loadItem(org.bukkit.configuration.ConfigurationSection section, Material defaultMaterial, Map<String, String> placeholders, org.bukkit.OfflinePlayer skullOwnerFallback) {
+        if (section == null) {
+            return createItem(defaultMaterial, "", null, null, null, skullOwnerFallback);
+        }
+        String materialStr = section.getString("material");
+        Material material = materialStr != null ? Material.matchMaterial(materialStr) : defaultMaterial;
+        if (material == null) material = defaultMaterial;
+        if (material == null) material = Material.STONE;
+
+        String name = section.getString("name", "");
+        List<String> lore = section.getStringList("lore");
+        Integer cmd = section.contains("custom-model-data") ? section.getInt("custom-model-data") : null;
+        String texture = section.getString("skull-texture");
+
+        // Placeholders replacement
+        if (placeholders != null) {
+            for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+                name = name.replace(entry.getKey(), entry.getValue());
+            }
+            if (lore != null && !lore.isEmpty()) {
+                lore = lore.stream().map(line -> {
+                    for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+                        line = line.replace(entry.getKey(), entry.getValue());
+                    }
+                    return line;
+                }).toList();
+            }
+        }
+
+        return createItem(material, name, lore, cmd, texture, skullOwnerFallback);
     }
 
     @EventHandler

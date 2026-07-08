@@ -36,9 +36,7 @@ public class ProfileGUI {
         PlayerProfile profile = profileOpt.get();
 
         // 1. Bordure
-        Material borderMat = Material.matchMaterial(config.getString("menus.profile.items.border.material", "GRAY_STAINED_GLASS_PANE"));
-        if (borderMat == null) borderMat = Material.GRAY_STAINED_GLASS_PANE;
-        ItemStack borderItem = MenuFactory.createItem(borderMat, " ", null);
+        ItemStack borderItem = MenuFactory.loadItem(config.getConfigurationSection("menus.profile.items.border"), Material.GRAY_STAINED_GLASS_PANE);
         List<Integer> borderSlots = config.getIntegerList("menus.profile.items.border.slots");
         for (int slot : borderSlots) {
             if (slot >= 0 && slot < size) {
@@ -59,15 +57,17 @@ public class ProfileGUI {
 
         // 3. Tête de joueur (Slot 13)
         int headSlot = config.getInt("menus.profile.items.player-head.slot", 13);
-        String headName = config.getString("menus.profile.items.player-head.name", "<gold>%player%").replace("%player%", player.getName());
-        List<String> headLore = config.getStringList("menus.profile.items.player-head.lore");
-        List<String> formattedHeadLore = headLore.stream()
-                .map(line -> line.replace("%player%", player.getName())
-                        .replace("%rank%", plugin.getRankDisplayName(profile.getRankLevel()))
-                        .replace("%elo%", String.valueOf(profile.getElo()))
-                        .replace("%position%", positionStr))
-                .toList();
-        ItemStack headItem = MenuFactory.createItem(Material.PLAYER_HEAD, headName, formattedHeadLore);
+        ItemStack headItem = MenuFactory.loadItem(
+                config.getConfigurationSection("menus.profile.items.player-head"),
+                Material.PLAYER_HEAD,
+                Map.of(
+                        "%player%", player.getName(),
+                        "%rank%", plugin.getRankDisplayName(profile.getRankLevel()),
+                        "%elo%", String.valueOf(profile.getElo()),
+                        "%position%", positionStr
+                ),
+                player
+        );
         if (headSlot >= 0 && headSlot < size) {
             inv.setItem(headSlot, headItem);
         }
@@ -138,11 +138,7 @@ public class ProfileGUI {
 
         // 5. Bouton Historique (Slot 31)
         int historySlot = config.getInt("menus.profile.items.history-button.slot", 31);
-        Material historyMat = Material.matchMaterial(config.getString("menus.profile.items.history-button.material", "BOOK"));
-        if (historyMat == null) historyMat = Material.BOOK;
-        String historyName = config.getString("menus.profile.items.history-button.name", "<aqua>Historique d'ELO");
-        List<String> historyLore = config.getStringList("menus.profile.items.history-button.lore");
-        ItemStack historyItem = MenuFactory.createItem(historyMat, historyName, historyLore);
+        ItemStack historyItem = MenuFactory.loadItem(config.getConfigurationSection("menus.profile.items.history-button"), Material.BOOK);
         if (historySlot >= 0 && historySlot < size) {
             inv.setItem(historySlot, historyItem);
             holder.setAction(historySlot, event -> new HistoryGUI(plugin).open(player, 1));
@@ -150,11 +146,7 @@ public class ProfileGUI {
 
         // 6. Bouton Classement (Slot 33)
         int leaderboardSlot = config.getInt("menus.profile.items.leaderboard-button.slot", 33);
-        Material leaderboardMat = Material.matchMaterial(config.getString("menus.profile.items.leaderboard-button.material", "GOLD_INGOT"));
-        if (leaderboardMat == null) leaderboardMat = Material.GOLD_INGOT;
-        String leaderboardName = config.getString("menus.profile.items.leaderboard-button.name", "<gold>Classement Global");
-        List<String> leaderboardLore = config.getStringList("menus.profile.items.leaderboard-button.lore");
-        ItemStack leaderboardItem = MenuFactory.createItem(leaderboardMat, leaderboardName, leaderboardLore);
+        ItemStack leaderboardItem = MenuFactory.loadItem(config.getConfigurationSection("menus.profile.items.leaderboard-button"), Material.GOLD_INGOT);
         if (leaderboardSlot >= 0 && leaderboardSlot < size) {
             inv.setItem(leaderboardSlot, leaderboardItem);
             holder.setAction(leaderboardSlot, event -> new LeaderboardGUI(plugin).open(player, 0));
@@ -162,11 +154,7 @@ public class ProfileGUI {
 
         // 7. Bouton Quota (Slot 32)
         int quotaSlot = config.getInt("menus.profile.items.quota-button.slot", 32);
-        Material quotaMat = Material.matchMaterial(config.getString("menus.profile.items.quota-button.material", "CHEST"));
-        if (quotaMat == null) quotaMat = Material.CHEST;
-        String quotaName = config.getString("menus.profile.items.quota-button.name", "<green>Vos Quotas");
-        List<String> quotaLore = config.getStringList("menus.profile.items.quota-button.lore");
-        ItemStack quotaItem = MenuFactory.createItem(quotaMat, quotaName, quotaLore);
+        ItemStack quotaItem = MenuFactory.loadItem(config.getConfigurationSection("menus.profile.items.quota-button"), Material.CHEST);
         if (quotaSlot >= 0 && quotaSlot < size) {
             inv.setItem(quotaSlot, quotaItem);
             holder.setAction(quotaSlot, event -> new QuotaGUI(plugin).open(player));
