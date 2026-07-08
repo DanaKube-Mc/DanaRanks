@@ -3,7 +3,6 @@ package app.danakube.danaranks.features.quota.ui;
 import app.danakube.danaranks.core.DanaRanks;
 import app.danakube.danaranks.core.profile.PlayerProfile;
 import app.danakube.danaranks.features.quota.ObjectiveConfig;
-import app.danakube.danaranks.features.quota.QuotaConfigLoader;
 import app.danakube.danaranks.ui.shared.MenuFactory;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;

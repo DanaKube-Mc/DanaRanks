@@ -63,7 +63,7 @@ public class ProfileGUI {
         List<String> headLore = config.getStringList("menus.profile.items.player-head.lore");
         List<String> formattedHeadLore = headLore.stream()
                 .map(line -> line.replace("%player%", player.getName())
-                        .replace("%rank%", String.valueOf(profile.getRankLevel()))
+                        .replace("%rank%", plugin.getRankDisplayName(profile.getRankLevel()))
                         .replace("%elo%", String.valueOf(profile.getElo()))
                         .replace("%position%", positionStr))
                 .toList();
@@ -73,8 +73,6 @@ public class ProfileGUI {
         }
 
         // 4. Frise des Rangs (Option B)
-        int timelineRow = config.getInt("menus.profile.timeline.row", 2);
-        int startSlot = timelineRow * 9; // Ligne 3 = slots 18 à 26
         int currentRank = profile.getRankLevel();
 
         Material pastMat = Material.matchMaterial(config.getString("menus.profile.timeline.materials.past", "GRAY_DYE"));
@@ -85,34 +83,56 @@ public class ProfileGUI {
         if (currentMat == null) currentMat = Material.GOLD_BLOCK;
         if (futureMat == null) futureMat = Material.RED_DYE;
 
-        for (int k = 0; k < 9; k++) {
-            int targetSlot = startSlot + k;
-            int rankForSlot;
-
-            if (currentRank <= 5) {
-                rankForSlot = 1 + k;
-            } else if (currentRank >= 46) {
-                rankForSlot = 42 + k;
-            } else {
-                rankForSlot = currentRank + (k - 4);
+        List<Integer> timelineSlots = config.getIntegerList("menus.profile.timeline.slots");
+        if (timelineSlots.isEmpty()) {
+            timelineSlots = new ArrayList<>();
+            int timelineRow = config.getInt("menus.profile.timeline.row", 2);
+            int startSlot = timelineRow * 9;
+            for (int k = 0; k < 9; k++) {
+                timelineSlots.add(startSlot + k);
             }
+        }
+
+        int N = timelineSlots.size();
+        int currentSlotVal = config.getInt("menus.profile.timeline.current-slot", -1);
+        int currentSlotIdx = timelineSlots.indexOf(currentSlotVal);
+        if (currentSlotIdx == -1) {
+            currentSlotIdx = N / 2;
+        }
+
+        int startRank = currentRank - currentSlotIdx;
+        int endRank = startRank + N - 1;
+
+        if (startRank < 1) {
+            startRank = 1;
+        } else if (endRank > 50) {
+            startRank = 50 - N + 1;
+        }
+        if (startRank < 1) startRank = 1;
+
+        for (int k = 0; k < N; k++) {
+            int targetSlot = timelineSlots.get(k);
+            int rankForSlot = startRank + k;
 
             if (rankForSlot >= 1 && rankForSlot <= 50) {
                 Material itemMat;
+                String rankName = plugin.getRankDisplayName(rankForSlot);
                 String prefix;
                 if (rankForSlot < currentRank) {
                     itemMat = pastMat;
-                    prefix = "<gray>Rang " + rankForSlot + " (Validé)";
+                    prefix = "<gray>" + rankName + " (Validé)";
                 } else if (rankForSlot == currentRank) {
                     itemMat = currentMat;
-                    prefix = "<gold>Rang " + rankForSlot + " (Actuel)";
+                    prefix = "<gold>" + rankName + " (Actuel)";
                 } else {
                     itemMat = futureMat;
-                    prefix = "<red>Rang " + rankForSlot + " (Futur)";
+                    prefix = "<red>" + rankName + " (Futur)";
                 }
 
                 ItemStack timelineItem = MenuFactory.createItem(itemMat, prefix, List.of("<gray>Progression du parcours"));
-                inv.setItem(targetSlot, timelineItem);
+                if (targetSlot >= 0 && targetSlot < size) {
+                    inv.setItem(targetSlot, timelineItem);
+                }
             }
         }
 

@@ -127,7 +127,6 @@ public class QuotaService {
     }
 
     public void processGlobalReset(PlayerProfile profile, Instant now) {
-        int activeRank = progressTracker.getActiveQuotaRank(profile);
         int level = getLevelFromRank(profile.getRankLevel());
 
         double totalSurplusElo = 0;

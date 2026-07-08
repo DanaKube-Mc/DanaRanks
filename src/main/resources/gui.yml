@@ -27,14 +27,16 @@ menus:
         slots: [0, 1, 2, 3, 5, 6, 7, 8, 9, 17, 19, 20, 21, 23, 24, 25, 26]
 
   profile:
-    title: "<dark_gray>Profil de %player%"
+    title: "<dark_gray><b>%player%"
     size: 45
     timeline:
       row: 2 # Ligne 3 (slots 18 à 26)
       materials:
-        past: "GRAY_DYE"
-        current: "GOLD_BLOCK"
-        future: "RED_DYE"
+        past: "GRAY_STAINED_GLASS_PANE"
+        current: "LIME_STAINED_GLASS_PANE"
+        future: "RED_STAINED_GLASS_PANE"
+      slots: [10, 11, 12, 13, 14, 15, 16]
+      current-slot: 13
     items:
       player-head:
         slot: 13
@@ -119,6 +121,9 @@ menus:
   history:
     title: "<dark_gray>Historique d'ELO de %player% (Page %page%)"
     size: 54
+    format:
+      entry: "<gray>• %time% | %description% : %color%%sign%%elo% ELO</gray>"
+      total: "<gray>Total Journée : <gold>%sign%%total% ELO</gold></gray>"
     items:
       prev-page:
         material: "ARROW"

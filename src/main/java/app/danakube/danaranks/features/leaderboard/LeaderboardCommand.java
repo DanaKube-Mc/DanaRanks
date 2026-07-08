@@ -47,7 +47,7 @@ public class LeaderboardCommand implements CommandExecutor {
                     "<yellow>#%pos%</yellow> <white>%player%</white> - <gold>Rang %rank% (%elo% ELO)</gold>",
                     Map.of("%pos%", String.valueOf(i + 1),
                            "%player%", entry.playerName(),
-                           "%rank%", String.valueOf(entry.rankLevel()),
+                           "%rank%", plugin.getRankDisplayName(entry.rankLevel()),
                            "%elo%", String.valueOf(entry.elo()))));
         }
     }

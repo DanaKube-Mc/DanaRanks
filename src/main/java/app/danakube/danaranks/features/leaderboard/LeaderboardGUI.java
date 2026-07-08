@@ -100,7 +100,7 @@ public class LeaderboardGUI {
             else if (rankNum == 3) mat = Material.COPPER_BLOCK;
 
             List<String> lore = new ArrayList<>();
-            lore.add("<gray>Grade : <gold>Rang " + entry.rankLevel() + "</gold>");
+            lore.add("<gray>Grade : <gold>" + plugin.getRankDisplayName(entry.rankLevel()) + "</gold>");
             lore.add("<gray>ELO : <gold>" + entry.elo() + "/100</gold>");
 
             ItemStack item = MenuFactory.createItem(

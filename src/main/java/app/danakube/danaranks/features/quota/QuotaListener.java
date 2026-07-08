@@ -82,7 +82,7 @@ public class QuotaListener implements Listener {
                 int activeRank = plugin.getQuotaService().getProgressTracker().getActiveQuotaRank(profile);
                 Map<String, ObjectiveConfig> objectives = plugin.getQuotaService().getProgressTracker().getActiveObjectives(profile);
                 player.sendMessage(plugin.getMessageManager().getMessageComponent("quota-join-header",
-                        "<aqua><b>[Quotas] Vos objectifs actuels (Rang %rank%) :</b></aqua>", Map.of("%rank%", String.valueOf(activeRank))));
+                        "<aqua><b>[Quotas] Vos objectifs actuels (Rang %rank%) :</b></aqua>", Map.of("%rank%", plugin.getRankDisplayName(activeRank))));
                 for (ObjectiveConfig obj : objectives.values()) {
                     double progress = plugin.getQuotaService().getProgressTracker().getProgress(profile, obj.name());
                     player.sendMessage(plugin.getMessageManager().getMessageComponent("quota-join-objective-line",

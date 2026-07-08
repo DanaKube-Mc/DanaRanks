@@ -256,4 +256,13 @@ public final class DanaRanks extends JavaPlugin {
         File guiFile = new File(getDataFolder(), "gui.yml");
         guiConfig = YamlConfiguration.loadConfiguration(guiFile);
     }
+
+    public String getRankDisplayName(int level) {
+        FileConfiguration config = getConfig();
+        String customName = config.getString("rank-names." + level);
+        if (customName != null) {
+            return customName;
+        }
+        return "Rang " + level;
+    }
 }

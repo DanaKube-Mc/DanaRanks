@@ -78,15 +78,30 @@ public class HistoryGUI {
 
                 List<String> lore = new ArrayList<>();
                 int dayTotal = 0;
+                String entryFormat = config.getString("menus.history.format.entry", "<gray>• %time% | %description% : %color%%sign%%elo% ELO</gray>");
+                String totalFormat = config.getString("menus.history.format.total", "<gray>Total Journée : <gold>%sign%%total% ELO</gold></gray>");
+
                 for (HistoryEntry entry : dayEntries) {
                     String time = entry.timestamp().atZone(ZoneId.systemDefault()).format(timeFormatter);
-                    String sign = entry.eloChange() >= 0 ? "+" : "";
-                    lore.add("<gray>• " + time + " | " + entry.description() + " : <yellow>" + sign + entry.eloChange() + " ELO</yellow></gray>");
+                    String color = entry.eloChange() >= 0 ? "<green>" : "<red>";
+                    String sign = entry.eloChange() >= 0 ? "+" : "-";
+                    String formattedEntry = entryFormat
+                            .replace("%time%", time)
+                            .replace("%description%", entry.description())
+                            .replace("%color%", color)
+                            .replace("%sign%", sign)
+                            .replace("%elo%", String.valueOf(Math.abs(entry.eloChange())));
+                    lore.add(formattedEntry);
                     dayTotal += entry.eloChange();
                 }
                 lore.add(" ");
-                String totalSign = dayTotal >= 0 ? "+" : "";
-                lore.add("<gray>Total Journée : <gold>" + totalSign + dayTotal + " ELO</gold></gray>");
+                String totalColor = dayTotal >= 0 ? "<green>" : "<red>";
+                String totalSign = dayTotal >= 0 ? "+" : "-";
+                String formattedTotal = totalFormat
+                        .replace("%color%", totalColor)
+                        .replace("%sign%", totalSign)
+                        .replace("%total%", String.valueOf(Math.abs(dayTotal)));
+                lore.add(formattedTotal);
 
                 ItemStack paper = MenuFactory.createItem(
                         Material.PAPER,

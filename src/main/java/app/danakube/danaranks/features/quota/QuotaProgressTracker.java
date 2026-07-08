@@ -197,7 +197,6 @@ public class QuotaProgressTracker {
         initializeActiveObjectives(profile, activeRank);
     }
 
-    @SuppressWarnings("unchecked")
     public Map<String, ObjectiveConfig> getActiveObjectives(PlayerProfile profile) {
         Map<String, Object> progress = profile.getQuotaProgress();
         Object activeObj = progress.get("active_objectives");
@@ -223,7 +222,6 @@ public class QuotaProgressTracker {
         return getActiveObjectives(profile);
     }
 
-    @SuppressWarnings("unchecked")
     public void initializeActiveObjectives(PlayerProfile profile, int rank) {
         QuotaConfig quotaConfig = null;
         if (quotaService != null) {
