@@ -124,11 +124,11 @@ public class QuotaProgressTracker {
                                     if (milestone >= 100) {
                                         onlinePlayer.sendMessage(plugin.getMessageManager().getMessageComponent("quota-milestone-reached",
                                                 "<green>[Quotas] Objectif %objective% atteint ! (+%elo% ELO)</green>",
-                                                Map.of("%objective%", obj.name(), "%elo%", String.valueOf(obj.baseElo()))));
+                                                Map.of("%objective%", plugin.getResourceDisplayName(obj.name()), "%elo%", String.valueOf(obj.baseElo()))));
                                     } else {
                                         onlinePlayer.sendMessage(plugin.getMessageManager().getMessageComponent("quota-milestone-progress",
                                                 "<yellow>[Quotas] Progression : %objective% à %milestone%%% (%progress%/%target%)</yellow>",
-                                                Map.of("%objective%", obj.name(), "%milestone%", String.valueOf(milestone),
+                                                Map.of("%objective%", plugin.getResourceDisplayName(obj.name()), "%milestone%", String.valueOf(milestone),
                                                         "%progress%", String.format("%.0f", newValue), "%target%", String.format("%.0f", target))));
                                     }
                                 }

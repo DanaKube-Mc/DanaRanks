@@ -61,6 +61,14 @@ public class MessageManager {
                 }
             }
         }
+        if (config.isConfigurationSection("resources")) {
+            for (String key : config.getConfigurationSection("resources").getKeys(false)) {
+                String value = config.getString("resources." + key);
+                if (value != null) {
+                    messages.put("resources." + key, value);
+                }
+            }
+        }
     }
 
     private void createDefaultLangFile(File file) {

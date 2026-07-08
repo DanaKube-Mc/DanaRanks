@@ -153,10 +153,10 @@ public class RushManager {
         if (plugin == null) return;
         Bukkit.broadcast(getMessageComponent("rush-planned-announcement",
                 "<blue>[Rush] Le Rush quotidien sur la ressource <gold>%resource%</gold> est planifié ! Tapez <yellow>/rush join</yellow> pour vous inscrire !</blue>",
-                Map.of("%resource%", state.getDailyResource())));
+                Map.of("%resource%", plugin.getResourceDisplayName(state.getDailyResource()))));
         sendDiscordWebhook(formatMessage("rush-discord-planned",
                 "[Rush] Le Rush sur la ressource %resource% est planifié pour aujourd'hui ! Les inscriptions sont ouvertes via /rush join !",
-                Map.of("%resource%", state.getDailyResource())));
+                Map.of("%resource%", plugin.getResourceDisplayName(state.getDailyResource()))));
     }
 
     public boolean registerPlayer(UUID uuid, Instant now) {
@@ -318,7 +318,7 @@ public class RushManager {
                 visualManager.hideAnnounceBar();
                 sendDiscordWebhook(formatMessage("rush-discord-started",
                         "[Rush] Le Rush quotidien sur la ressource %resource% vient de démarrer pour %duration% minutes !",
-                        Map.of("%resource%", state.getDailyResource(), "%duration%", String.valueOf(state.getDurationMinutes()))));
+                        Map.of("%resource%", plugin.getResourceDisplayName(state.getDailyResource()), "%duration%", String.valueOf(state.getDurationMinutes()))));
                 try {
                     if (Bukkit.getServer() != null && Bukkit.getPluginManager() != null) {
                         Bukkit.getPluginManager().callEvent(new DanaRushStartEvent(state.getDailyResource(), state.getDurationMinutes(), startInstant));
@@ -342,13 +342,13 @@ public class RushManager {
         }
         else if (!now.isBefore(preAnnounceInstant) && now.isBefore(startInstant)) {
             long remainingSecs = startInstant.getEpochSecond() - now.getEpochSecond();
-            visualManager.showAnnounceBar(formatTime(remainingSecs), state.getDailyResource());
+            visualManager.showAnnounceBar(formatTime(remainingSecs), plugin.getResourceDisplayName(state.getDailyResource()));
 
             if (!state.isDiscordAnnounced()) {
                 state.setDiscordAnnounced(true);
                 sendDiscordWebhook(formatMessage("rush-discord-pre-announce",
                         "[Rush] Le Rush sur la ressource %resource% démarrera dans %time% minutes ! Tapez /rush join en jeu !",
-                        Map.of("%resource%", state.getDailyResource(), "%time%", String.valueOf(preAnnounceMinutes))));
+                        Map.of("%resource%", plugin.getResourceDisplayName(state.getDailyResource()), "%time%", String.valueOf(preAnnounceMinutes))));
             }
         }
     }
@@ -547,7 +547,7 @@ public class RushManager {
         visualManager.hideAnnounceBar();
         sendDiscordWebhook(formatMessage("rush-discord-started",
                 "[Rush] Le Rush quotidien sur la ressource %resource% vient de démarrer pour %duration% minutes !",
-                Map.of("%resource%", resource, "%duration%", String.valueOf(durationMinutes))));
+                Map.of("%resource%", plugin.getResourceDisplayName(resource), "%duration%", String.valueOf(durationMinutes))));
         try {
             if (Bukkit.getServer() != null && Bukkit.getPluginManager() != null) {
                 Bukkit.getPluginManager().callEvent(new DanaRushStartEvent(resource, durationMinutes, nowInstant));
@@ -557,7 +557,7 @@ public class RushManager {
         }
         Bukkit.broadcast(getMessageComponent("rush-started-announcement",
                 "<blue>[Rush] Un Rush compétitif vient de commencer sur la ressource <gold>%resource%</gold> pour <yellow>%duration%</yellow> minutes ! Tapez <green>/rush join</green> pour y participer !</blue>",
-                Map.of("%resource%", resource, "%duration%", String.valueOf(durationMinutes))));
+                Map.of("%resource%", plugin.getResourceDisplayName(resource), "%duration%", String.valueOf(durationMinutes))));
     }
 
     public void forceStopRush() {
@@ -596,11 +596,11 @@ public class RushManager {
 
         sendDiscordWebhook(formatMessage("rush-discord-scheduled-admin",
                 "[Rush] Un administrateur a planifié un Rush sur la ressource %resource% qui commencera dans %delay% minutes !",
-                Map.of("%resource%", resource, "%delay%", String.valueOf(delayMinutes))));
+                Map.of("%resource%", plugin.getResourceDisplayName(resource), "%delay%", String.valueOf(delayMinutes))));
 
         Bukkit.broadcast(getMessageComponent("rush-scheduled-admin",
                 "<blue>[Rush] Un administrateur a planifié un Rush sur la ressource <gold>%resource%</gold> qui commencera dans <yellow>%delay%</yellow> minutes ! Tapez <green>/rush join</green> pour y participer !</blue>",
-                Map.of("%resource%", resource, "%delay%", String.valueOf(delayMinutes))));
+                Map.of("%resource%", plugin.getResourceDisplayName(resource), "%delay%", String.valueOf(delayMinutes))));
     }
 
     private void broadcastRushSummary(List<PlayerProfile> profiles, Map<UUID, Integer> eloChanges, Map<UUID, Double> scores) {
@@ -663,7 +663,7 @@ public class RushManager {
             return;
         }
         sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-header", "<blue>--- Informations sur le Rush ---</blue>"));
-        sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-resource", "<white>Ressource : <green>%resource%</green></white>", Map.of("%resource%", state.getDailyResource())));
+        sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-resource", "<white>Ressource : <green>%resource%</green></white>", Map.of("%resource%", plugin.getResourceDisplayName(state.getDailyResource()))));
         sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-duration", "<white>Durée : <yellow>%duration% minutes</yellow></white>", Map.of("%duration%", String.valueOf(state.getDurationMinutes()))));
         sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-status", "<white>Statut : <yellow>%status%</yellow></white>", Map.of("%status%", state.isRushActive() ? "En cours" : "Attente de démarrage")));
         sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-registered-count", "<white>Nombre d'inscrits : <yellow>%count%</yellow></white>", Map.of("%count%", String.valueOf(getRegisteredPlayersCount()))));

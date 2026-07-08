@@ -129,7 +129,7 @@ public class RushCommand extends Command {
         if (now.isBefore(startInstant)) {
             player.sendMessage(getMessage("rush-status-announced", 
                     "<blue>[Rush] Le Rush (Ressource: <gold>%resource%</gold>) commencera à <yellow>%time%</yellow> pour une durée de <yellow>%duration%</yellow> minutes.\nTapez <green>/rush join</green> pour participer !</blue>",
-                    Map.of("%resource%", resource, "%time%", formattedStart, "%duration%", String.valueOf(duration))));
+                    Map.of("%resource%", plugin.getResourceDisplayName(resource), "%time%", formattedStart, "%duration%", String.valueOf(duration))));
         } else if (now.isAfter(endInstant)) {
             player.sendMessage(getMessage("rush-status-finished", "<blue>[Rush] L'événement d'aujourd'hui est terminé !</blue>"));
         } else {

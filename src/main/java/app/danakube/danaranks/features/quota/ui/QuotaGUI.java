@@ -74,7 +74,9 @@ public class QuotaGUI {
         int profileButtonSlot = config.getInt("menus.quota.items.profile-button.slot", 18);
         ItemStack profileButtonItem = MenuFactory.loadItem(
                 config.getConfigurationSection("menus.quota.items.profile-button"),
-                Material.BARRIER
+                Material.BARRIER,
+                Map.of("%player%", player.getName()),
+                player
         );
         if (profileButtonSlot >= 0 && profileButtonSlot < size) {
             inv.setItem(profileButtonSlot, profileButtonItem);
@@ -103,7 +105,7 @@ public class QuotaGUI {
             filledCount = Math.max(0, Math.min(barSize, filledCount));
             String bar = barSymbolFilled.repeat(filledCount) + barSymbolEmpty.repeat(barSize - filledCount);
 
-            String formattedName = format.replace("%resource%", obj.name())
+            String formattedName = format.replace("%resource%", plugin.getResourceDisplayName(obj.name()))
                     .replace("%progress%", String.format("%.0f", progress))
                     .replace("%target%", String.format("%.0f", target))
                     .replace("%percentage%", percentage + "%")

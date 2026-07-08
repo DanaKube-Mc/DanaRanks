@@ -81,19 +81,30 @@ public class MenuFactory implements Listener {
             }
             if (material == Material.PLAYER_HEAD && meta instanceof org.bukkit.inventory.meta.SkullMeta skullMeta) {
                 if (skullTexture != null && !skullTexture.isEmpty()) {
-                    String base64Texture;
                     if (skullTexture.startsWith("http://") || skullTexture.startsWith("https://")) {
                         String json = "{\"textures\":{\"SKIN\":{\"url\":\"" + skullTexture + "\"}}}";
-                        base64Texture = java.util.Base64.getEncoder().encodeToString(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        String base64Texture = java.util.Base64.getEncoder().encodeToString(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        try {
+                            com.destroystokyo.paper.profile.PlayerProfile profile = Bukkit.createProfile(java.util.UUID.randomUUID(), null);
+                            profile.setProperty(new com.destroystokyo.paper.profile.ProfileProperty("textures", base64Texture));
+                            skullMeta.setPlayerProfile(profile);
+                        } catch (Exception e) {
+                            // ignore
+                        }
+                    } else if (skullTexture.length() > 36) {
+                        try {
+                            com.destroystokyo.paper.profile.PlayerProfile profile = Bukkit.createProfile(java.util.UUID.randomUUID(), null);
+                            profile.setProperty(new com.destroystokyo.paper.profile.ProfileProperty("textures", skullTexture));
+                            skullMeta.setPlayerProfile(profile);
+                        } catch (Exception e) {
+                            // ignore
+                        }
                     } else {
-                        base64Texture = skullTexture;
-                    }
-                    try {
-                        com.destroystokyo.paper.profile.PlayerProfile profile = Bukkit.createProfile(java.util.UUID.randomUUID(), null);
-                        profile.setProperty(new com.destroystokyo.paper.profile.ProfileProperty("textures", base64Texture));
-                        skullMeta.setPlayerProfile(profile);
-                    } catch (Exception e) {
-                        // ignore
+                        if (skullTexture.equals("%player%") && skullOwner != null) {
+                            skullMeta.setOwningPlayer(skullOwner);
+                        } else {
+                            skullMeta.setOwningPlayer(Bukkit.getOfflinePlayer(skullTexture));
+                        }
                     }
                 } else if (skullOwner != null) {
                     skullMeta.setOwningPlayer(skullOwner);

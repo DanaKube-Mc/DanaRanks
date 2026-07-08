@@ -287,12 +287,12 @@ public class AdminCommandExecutor implements CommandExecutor {
                     plugin.getRushManager().forceScheduleRush(res, duration, delay);
                     sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-planned",
                             "<green>Rush planifié sur la ressource %resource% (durée: %duration%m) dans %delay% minutes.</green>",
-                            Map.of("%resource%", res, "%duration%", String.valueOf(duration), "%delay%", String.valueOf(delay))));
+                            Map.of("%resource%", plugin.getResourceDisplayName(res), "%duration%", String.valueOf(duration), "%delay%", String.valueOf(delay))));
                 } else {
                     plugin.getRushManager().forceStartRush(res, duration);
                     sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-started",
                             "<green>Rush forcé démarré sur la ressource %resource% pendant %duration% minutes.</green>",
-                            Map.of("%resource%", res, "%duration%", String.valueOf(duration))));
+                            Map.of("%resource%", plugin.getResourceDisplayName(res), "%duration%", String.valueOf(duration))));
                 }
                 break;
             case "stop":

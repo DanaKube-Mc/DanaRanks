@@ -273,4 +273,12 @@ public final class DanaRanks extends JavaPlugin {
         }
         return null;
     }
+
+    public String getResourceDisplayName(String resourceId) {
+        String translated = getMessageManager().getMessage("resources." + resourceId, null);
+        if (translated != null && !translated.isEmpty()) {
+            return translated;
+        }
+        return resourceId;
+    }
 }

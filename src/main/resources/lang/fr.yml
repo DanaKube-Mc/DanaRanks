@@ -97,4 +97,21 @@ messages:
   rush-info-scores-header: "<white>Scores des inscrits :</white>"
   rush-info-score-line: " - <white>%player%</white> : <green>%score% pts</green>"
 
-
+resources:
+  vanilla-xp-gained: "XP Vanilla (Gagnée)"
+  vanilla-xp-spent: "XP Vanilla (Consommée)"
+  vanilla-xp: "XP Vanilla"
+  job-xp: "XP Métiers"
+  job-xp-all: "Toutes XP Métiers"
+  job-xp-mineur: "XP Métier Mineur"
+  job-xp-bucheron: "XP Métier Bûcheron"
+  job-xp-fermier: "XP Métier Fermier"
+  job-xp-pecheur: "XP Métier Pêcheur"
+  job-xp-chasseur: "XP Métier Chasseur"
+  job-xp-forgeron: "XP Métier Forgeron"
+  job-xp-brasseur: "XP Métier Brasseur"
+  job-xp-enchanteur: "XP Métier Enchanteur"
+  job-xp-alchimiste: "XP Métier Alchimiste"
+  lumens-gained: "Lumens Gagnés"
+  lumens-spent: "Lumens Dépensés"
+  tool-xp: "XP Outils"
