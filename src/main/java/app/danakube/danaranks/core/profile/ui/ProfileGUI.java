@@ -88,6 +88,20 @@ public class ProfileGUI {
         if (futureMat == null) futureMat = Material.RED_DYE;
         if (customMat == null) customMat = Material.PAPER;
 
+        List<String> timelineLore = new ArrayList<>();
+        if (config.contains("menus.profile.timeline.lore")) {
+            if (config.isList("menus.profile.timeline.lore")) {
+                timelineLore = config.getStringList("menus.profile.timeline.lore");
+            } else {
+                String singleLore = config.getString("menus.profile.timeline.lore");
+                if (singleLore != null && !singleLore.isEmpty()) {
+                    timelineLore = List.of(singleLore);
+                }
+            }
+        } else {
+            timelineLore = List.of("<gray>Progression du parcours");
+        }
+
         List<Integer> timelineSlots = config.getIntegerList("menus.profile.timeline.slots");
         if (timelineSlots.isEmpty()) {
             timelineSlots = new ArrayList<>();
@@ -129,9 +143,9 @@ public class ProfileGUI {
                 Integer rankCmd = plugin.getRankCustomModelData(rankForSlot);
                 ItemStack timelineItem;
                 if (rankCmd != null) {
-                    timelineItem = MenuFactory.createItem(customMat, prefix, List.of("<gray>Progression du parcours"), rankCmd, null, null);
+                    timelineItem = MenuFactory.createItem(customMat, prefix, timelineLore, rankCmd, null, null);
                 } else {
-                    timelineItem = MenuFactory.createItem(itemMat, prefix, List.of("<gray>Progression du parcours"));
+                    timelineItem = MenuFactory.createItem(itemMat, prefix, timelineLore);
                 }
                 if (targetSlot >= 0 && targetSlot < size) {
                     inv.setItem(targetSlot, timelineItem);

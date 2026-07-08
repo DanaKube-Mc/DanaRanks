@@ -92,13 +92,31 @@ public class LeaderboardGUI {
             else if (rankNum == 2) mat = Material.IRON_BLOCK;
             else if (rankNum == 3) mat = Material.COPPER_BLOCK;
 
-            List<String> lore = new ArrayList<>();
-            lore.add("<gray>Grade : <gold>" + plugin.getRankDisplayName(entry.rankLevel()) + "</gold>");
-            lore.add("<gray>ELO : <gold>" + entry.elo() + "/100</gold>");
+            String entryNameFormat = config.getString("menus.leaderboard.format.entry-name", "<gold>#%position% | %player%</gold>");
+            List<String> entryLoreFormat = config.getStringList("menus.leaderboard.format.entry-lore");
+            if (entryLoreFormat.isEmpty()) {
+                entryLoreFormat = List.of(
+                        "<gray>Grade : <gold>%rank%</gold>",
+                        "<gray>ELO : <gold>%elo%/100</gold>"
+                );
+            }
+
+            String name = entryNameFormat
+                    .replace("%position%", String.valueOf(rankNum))
+                    .replace("%player%", entry.playerName());
+
+            List<String> lore = entryLoreFormat.stream()
+                    .map(line -> line
+                            .replace("%position%", String.valueOf(rankNum))
+                            .replace("%player%", entry.playerName())
+                            .replace("%rank%", plugin.getRankDisplayName(entry.rankLevel()))
+                            .replace("%elo%", String.valueOf(entry.elo()))
+                    )
+                    .toList();
 
             ItemStack item = MenuFactory.createItem(
                     mat,
-                    "<gold>#" + rankNum + " | " + entry.playerName() + "</gold>",
+                    name,
                     lore,
                     null,
                     null,

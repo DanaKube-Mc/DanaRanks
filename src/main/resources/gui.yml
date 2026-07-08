@@ -8,6 +8,10 @@ menus:
       bar-symbol-filled: "█"
       bar-symbol-empty: "░"
       bar-size: 10
+    format:
+      base-reward: "<gray>Récompense de base : <gold>+%elo% ELO</gold></gray>"
+      max-surplus: "<gray>Surplus maximum : <gold>+%elo% ELO</gold></gray>"
+      fail-penalty: "<gray>Pénalité d'échec : <red>-%elo% ELO</red></gray>"
     items:
       clock:
         material: "CLOCK"
@@ -38,6 +42,7 @@ menus:
         custom: "PAPER"
       slots: [10, 11, 12, 13, 14, 15, 16]
       current-slot: 13
+      lore: "<gray>Progression du parcours"
     items:
       player-head:
         slot: 13
@@ -72,6 +77,11 @@ menus:
   leaderboard:
     title: "<dark_gray>Classement Global (Top 50)"
     size: 54
+    format:
+      entry-name: "<gold>#%position% | %player%</gold>"
+      entry-lore:
+        - "<gray>Grade : <gold>%rank%</gold>"
+        - "<gray>ELO : <gold>%elo%/100</gold>"
     items:
       profile-button:
         material: "BARRIER"

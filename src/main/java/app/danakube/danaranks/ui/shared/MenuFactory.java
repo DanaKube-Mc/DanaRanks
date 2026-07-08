@@ -62,7 +62,7 @@ public class MenuFactory implements Listener {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            if (name != null && !name.isEmpty()) {
+            if (name != null) {
                 Component nameComponent = MiniMessage.miniMessage()
                         .deserialize(name)
                         .decoration(TextDecoration.ITALIC, false);
@@ -110,15 +110,15 @@ public class MenuFactory implements Listener {
 
     public static ItemStack loadItem(org.bukkit.configuration.ConfigurationSection section, Material defaultMaterial, Map<String, String> placeholders, org.bukkit.OfflinePlayer skullOwnerFallback) {
         if (section == null) {
-            return createItem(defaultMaterial, "", null, null, null, skullOwnerFallback);
+            return createItem(defaultMaterial, null, null, null, null, skullOwnerFallback);
         }
         String materialStr = section.getString("material");
         Material material = materialStr != null ? Material.matchMaterial(materialStr) : defaultMaterial;
         if (material == null) material = defaultMaterial;
         if (material == null) material = Material.STONE;
 
-        String name = section.getString("name", "");
-        List<String> lore = section.getStringList("lore");
+        String name = section.contains("name") ? section.getString("name") : null;
+        List<String> lore = section.contains("lore") ? section.getStringList("lore") : null;
         Integer cmd = null;
         if (section.contains("custom-model-data")) {
             String cmdRaw = section.getString("custom-model-data");
@@ -145,8 +145,10 @@ public class MenuFactory implements Listener {
 
         // Placeholders replacement
         if (placeholders != null) {
-            for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-                name = name.replace(entry.getKey(), entry.getValue());
+            if (name != null) {
+                for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+                    name = name.replace(entry.getKey(), entry.getValue());
+                }
             }
             if (lore != null && !lore.isEmpty()) {
                 lore = lore.stream().map(line -> {

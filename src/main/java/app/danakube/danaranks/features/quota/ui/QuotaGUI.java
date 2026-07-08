@@ -109,11 +109,15 @@ public class QuotaGUI {
                     .replace("%percentage%", percentage + "%")
                     .replace("%bar%", bar);
 
+            String baseRewardFormat = config.getString("menus.quota.format.base-reward", "<gray>Base reward : <gold>+%elo% ELO</gold></gray>");
+            String maxSurplusFormat = config.getString("menus.quota.format.max-surplus", "<gray>Max surplus : <gold>+%elo% ELO</gold></gray>");
+            String failPenaltyFormat = config.getString("menus.quota.format.fail-penalty", "<gray>Failure penalty : <red>-%elo% ELO</red></gray>");
+
             List<String> lore = new ArrayList<>();
-            lore.add("<gray>Base reward : <gold>+" + obj.baseElo() + " ELO</gold>");
-            lore.add("<gray>Max surplus : <gold>+" + obj.maxSurplusElo() + " ELO</gold>");
+            lore.add(baseRewardFormat.replace("%elo%", String.valueOf(obj.baseElo())));
+            lore.add(maxSurplusFormat.replace("%elo%", String.valueOf(obj.maxSurplusElo())));
             if (obj.failPenalty() > 0) {
-                lore.add("<gray>Failure penalty : <red>-" + obj.failPenalty() + " ELO</red>");
+                lore.add(failPenaltyFormat.replace("%elo%", String.valueOf(obj.failPenalty())));
             }
 
             Material objMat = Material.PAPER;
