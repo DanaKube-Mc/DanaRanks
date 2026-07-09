@@ -17,6 +17,7 @@ import app.danakube.danaranks.api.event.DanaRushStartEvent;
 import app.danakube.danaranks.api.event.DanaRushEndEvent;
 
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.command.CommandSender;
@@ -715,16 +716,20 @@ public class RushManager {
         }
 
         class SummaryEntry {
+            final UUID uuid;
             final String name;
             final int rank;
             final double points;
             final int eloChange;
+            final int rankLevel;
 
-            SummaryEntry(String name, int rank, double points, int eloChange) {
+            SummaryEntry(UUID uuid, String name, int rank, double points, int eloChange, int rankLevel) {
+                this.uuid = uuid;
                 this.name = name;
                 this.rank = rank;
                 this.points = points;
                 this.eloChange = eloChange;
+                this.rankLevel = rankLevel;
             }
         }
 
@@ -734,7 +739,7 @@ public class RushManager {
             int rank = rankings.getOrDefault(uuid, 99);
             double points = scores.getOrDefault(uuid, 0.0);
             int eloChange = eloChanges.getOrDefault(uuid, 0);
-            entries.add(new SummaryEntry(profile.getPlayerName(), rank, points, eloChange));
+            entries.add(new SummaryEntry(uuid, profile.getPlayerName(), rank, points, eloChange, profile.getRankLevel()));
         }
 
         entries.sort((e1, e2) -> Integer.compare(e2.eloChange, e1.eloChange));
@@ -748,7 +753,10 @@ public class RushManager {
                 String eloSign = entry.eloChange >= 0 ? "+" : "-";
                 String eloColor = entry.eloChange >= 0 ? "green" : "red";
 
-                Component line = plugin.getMessageManager().getMessageComponent("rush-summary-format",
+                OfflinePlayer playerOfLine = Bukkit.getOfflinePlayer(entry.uuid);
+                String rankDisplayName = plugin.getRankDisplayName(entry.rankLevel);
+
+                Component line = plugin.getMessageManager().getMessageComponentForPlayer("rush-summary-format",
                         "<yellow>#%pos%</yellow> <white><hover:show_text:'<gray>Cliquez pour voir le profil de %player%</gray>'><click:run_command:'/profile %player%'>%player%</click></hover></white> - <aqua>%score% pts</aqua> (<%color%>%sign%%change% ELO</%color>)",
                         Map.of(
                             "%pos%", String.valueOf(entry.rank),
@@ -756,8 +764,10 @@ public class RushManager {
                             "%score%", String.format("%.0f", entry.points),
                             "%color%", eloColor,
                             "%sign%", eloSign,
-                            "%change%", String.valueOf(Math.abs(entry.eloChange))
-                        ));
+                            "%change%", String.valueOf(Math.abs(entry.eloChange)),
+                            "%rank%", rankDisplayName,
+                            "%rang%", rankDisplayName
+                        ), playerOfLine);
                 Bukkit.getServer().broadcast(line);
             }
         }
@@ -778,16 +788,33 @@ public class RushManager {
         sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-registered-count", "<white>Nombre d'inscrits : <yellow>%count%</yellow></white>", Map.of("%count%", String.valueOf(getRegisteredPlayersCount()))));
 
         if (getRegisteredPlayersCount() > 0) {
-            sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-scores-header", "<white>Scores des inscrits :</white>"));
+            Player pSender = (sender instanceof Player p) ? p : null;
+            sender.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("rush-info-scores-header", "<white>Scores des inscrits :</white>", pSender));
             Map<UUID, Double> scores = state.getRegisteredScores();
             scores.entrySet().stream()
                 .sorted((e1, e2) -> Double.compare(e2.getValue(), e1.getValue()))
                 .forEach(e -> {
-                    String name = Bukkit.getOfflinePlayer(e.getKey()).getName();
-                    String nameStr = name != null ? name : e.getKey().toString();
-                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-score-line",
+                    UUID uuid = e.getKey();
+                    String name = Bukkit.getOfflinePlayer(uuid).getName();
+                    String nameStr = name != null ? name : uuid.toString();
+
+                    int rankLevel = 1;
+                    PlayerProfile profile = getProfileCacheMap().get(uuid);
+                    if (profile != null) {
+                        rankLevel = profile.getRankLevel();
+                    }
+                    String rankDisplayName = plugin != null ? plugin.getRankDisplayName(rankLevel) : "Rang " + rankLevel;
+
+                    OfflinePlayer playerOfLine = Bukkit.getOfflinePlayer(uuid);
+
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("rush-info-score-line",
                             " - <white>%player%</white> : <green>%score% pts</green>",
-                            Map.of("%player%", nameStr, "%score%", String.format("%.0f", e.getValue()))));
+                            Map.of(
+                                "%player%", nameStr,
+                                "%score%", String.format("%.0f", e.getValue()),
+                                "%rank%", rankDisplayName,
+                                "%rang%", rankDisplayName
+                            ), playerOfLine));
                 });
         }
     }
