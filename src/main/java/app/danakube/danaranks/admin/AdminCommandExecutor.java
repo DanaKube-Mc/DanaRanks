@@ -251,8 +251,9 @@ public class AdminCommandExecutor implements CommandExecutor {
     }
 
     private void handleRush(CommandSender sender, String[] args) {
+        Player pSender = (sender instanceof Player p) ? p : null;
         if (args.length < 3) {
-            sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-usage-rush", "<red>Usage: /danaranks admin rush <start|stop|end|info|add|leave|reload></red>"));
+            sender.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("admin-usage-rush", "<red>Usage: /danaranks admin rush <start|stop|end|info|add|leave|reload></red>", pSender));
             return;
         }
 
@@ -261,7 +262,7 @@ public class AdminCommandExecutor implements CommandExecutor {
         switch (subRush) {
             case "start":
                 if (args.length < 5) {
-                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-usage-rush-start", "<red>Usage: /danaranks admin rush start <ressource> <durée> [délai_lancement]</red>"));
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("admin-usage-rush-start", "<red>Usage: /danaranks admin rush start <ressource> <durée> [délai_lancement]</red>", pSender));
                     return;
                 }
                 String res = args[3];
@@ -269,7 +270,7 @@ public class AdminCommandExecutor implements CommandExecutor {
                 try {
                     duration = Integer.parseInt(args[4]);
                 } catch (NumberFormatException e) {
-                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-duration-invalid", "<red>La durée doit être un entier (en minutes).</red>"));
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("admin-rush-duration-invalid", "<red>La durée doit être un entier (en minutes).</red>", pSender));
                     return;
                 }
 
@@ -277,43 +278,47 @@ public class AdminCommandExecutor implements CommandExecutor {
                 if (args.length >= 6) {
                     delay = parseDelayMinutes(args[5]);
                     if (delay < 0) {
-                        sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-delay-invalid",
-                                "<red>Délai invalide. Formats acceptés: minutes (ex: 5), heures (ex: 1h), secondes (ex: 30s).</red>"));
+                        sender.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("admin-rush-delay-invalid",
+                                "<red>Délai invalide. Formats acceptés: minutes (ex: 5), heures (ex: 1h), secondes (ex: 30s).</red>", pSender));
                         return;
                     }
                 }
 
                 if (delay > 0) {
                     plugin.getRushManager().forceScheduleRush(res, duration, delay);
-                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-planned",
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("admin-rush-planned-confirm",
                             "<green>Rush planifié sur la ressource %resource% (durée: %duration%m) dans %delay% minutes.</green>",
-                            Map.of("%resource%", plugin.getResourceDisplayName(res), "%duration%", String.valueOf(duration), "%delay%", String.valueOf(delay))));
+                            Map.of("%resource%", plugin.getResourceDisplayName(res), "%duration%", String.valueOf(duration), "%delay%", String.valueOf(delay)), pSender));
                 } else {
                     plugin.getRushManager().forceStartRush(res, duration);
-                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-started",
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("admin-rush-started-confirm",
                             "<green>Rush forcé démarré sur la ressource %resource% pendant %duration% minutes.</green>",
-                            Map.of("%resource%", plugin.getResourceDisplayName(res), "%duration%", String.valueOf(duration))));
+                            Map.of(
+                                "%resource%", plugin.getResourceDisplayName(res),
+                                "%duration%", String.valueOf(duration),
+                                "%time%", String.valueOf(duration)
+                            ), pSender));
                 }
                 break;
             case "stop":
                 plugin.getRushManager().forceStopRush();
-                sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-stopped", "<green>Rush arrêté de force (sans distribution).</green>"));
+                sender.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("admin-rush-stopped-confirm", "<green>Rush arrêté de force (sans distribution).</green>", pSender));
                 break;
             case "end":
                 plugin.getRushManager().endRush(Instant.now());
-                sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rush-ended", "<green>Rush terminé normalement (distribution ELO et résumé lancés).</green>"));
+                sender.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("admin-rush-ended-confirm", "<green>Rush terminé normalement (distribution ELO et résumé lancés).</green>", pSender));
                 break;
             case "info":
                 plugin.getRushManager().printRushInfo(sender);
                 break;
             case "add":
                 if (args.length < 4) {
-                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-usage-rush-add", "<red>Usage: /danaranks admin rush add <joueur></red>"));
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("admin-usage-rush-add", "<red>Usage: /danaranks admin rush add <joueur></red>", pSender));
                     return;
                 }
                 Player playerToAdd = Bukkit.getPlayer(args[3]);
                 if (playerToAdd == null) {
-                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-player-not-found", "<red>Joueur introuvable ou hors-ligne.</red>"));
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("admin-player-not-found", "<red>Joueur introuvable ou hors-ligne.</red>", pSender));
                     return;
                 }
                 boolean addSuccess = plugin.getRushManager().registerPlayer(playerToAdd.getUniqueId(), Instant.now());

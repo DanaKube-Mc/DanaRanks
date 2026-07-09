@@ -122,14 +122,27 @@ public class QuotaProgressTracker {
                                 if (newValue >= milestoneTarget && oldVal < milestoneTarget && !announcedList.contains(milestone)) {
                                     announcedList.add(milestone);
                                     if (milestone >= 100) {
-                                        onlinePlayer.sendMessage(plugin.getMessageManager().getMessageComponent("quota-milestone-reached",
+                                        onlinePlayer.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("quota-milestone-reached",
                                                 "<green>[Quotas] Objectif %objective% atteint ! (+%elo% ELO)</green>",
-                                                Map.of("%objective%", plugin.getResourceDisplayName(obj.name()), "%elo%", String.valueOf(obj.baseElo()))));
+                                                Map.of(
+                                                    "%resource%", plugin.getResourceDisplayName(obj.name()),
+                                                    "%objective%", plugin.getResourceDisplayName(obj.name()),
+                                                    "%elo%", String.valueOf(obj.baseElo()),
+                                                    "%progress%", String.format("%.0f", newValue),
+                                                    "%target%", String.format("%.0f", target),
+                                                    "%rank%", plugin.getRankDisplayName(profile.getRankLevel())
+                                                ), onlinePlayer));
                                     } else {
-                                        onlinePlayer.sendMessage(plugin.getMessageManager().getMessageComponent("quota-milestone-progress",
+                                        onlinePlayer.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("quota-milestone-progress",
                                                 "<yellow>[Quotas] Progression : %objective% à %milestone%%% (%progress%/%target%)</yellow>",
-                                                Map.of("%objective%", plugin.getResourceDisplayName(obj.name()), "%milestone%", String.valueOf(milestone),
-                                                        "%progress%", String.format("%.0f", newValue), "%target%", String.format("%.0f", target))));
+                                                Map.of(
+                                                    "%resource%", plugin.getResourceDisplayName(obj.name()),
+                                                    "%objective%", plugin.getResourceDisplayName(obj.name()),
+                                                    "%milestone%", String.valueOf(milestone),
+                                                    "%progress%", String.format("%.0f", newValue),
+                                                    "%target%", String.format("%.0f", target),
+                                                    "%rank%", plugin.getRankDisplayName(profile.getRankLevel())
+                                                ), onlinePlayer));
                                     }
                                 }
                             }

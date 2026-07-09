@@ -107,7 +107,7 @@ public class QuotaConfigLoader {
         if (brackets.isEmpty()) {
             brackets.add(new RankBracket(1, 50, 10, 20, 0, 2));
         }
-        brackets.sort(java.util.Comparator.comparingInt(RankBracket::minRank));
+        brackets.sort(java.util.Comparator.comparingInt(b -> b.minRank()));
 
         ConfigurationSection resourcesSection = config.getConfigurationSection("resources");
         if (resourcesSection == null) {
