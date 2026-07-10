@@ -185,3 +185,16 @@ resources:
   lumens_gained: "Lumens Gagnés"
   lumens_spent: "Lumens Dépensés"
   tool_xp: "XP Outils"
+
+
+history-description:
+  BASE_ELO: "Validation Quota : %quota%"
+  QUOTA_SURPLUS: "Surplus Quota"
+  QUOTA_FAILURE: "Echec Quota"
+  QUOTA_DECAY: "Pénalité d'inactivité"
+  RUSH: "Rush Final"
+
+  history-description:
+  BASE_ELO:
+    job-xp-traqueur: "Objectif Traqueur Validé (Félicitations !)"
+    lumens-spent: "Quota Lumens complété"

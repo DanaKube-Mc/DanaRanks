@@ -197,7 +197,7 @@ public class QuotaProgressTracker {
         if (newValue >= obj.target()) {
             setBaseRewarded(profile, normalized, true);
             if (eloService != null) {
-                eloService.addElo(profile, obj.baseElo(), "BASE_ELO");
+                eloService.addElo(profile, obj.baseElo(), "BASE_ELO:" + obj.name());
             }
         }
     }

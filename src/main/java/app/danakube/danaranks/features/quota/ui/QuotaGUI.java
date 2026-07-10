@@ -156,21 +156,22 @@ public class QuotaGUI {
                         int leftLength = barLength / 2;
                         int rightLength = barLength - leftLength;
 
-                        int leftFilled = Math.min(filled, leftLength);
-                        int leftEmpty = leftLength - leftFilled;
+                        if (filled > leftLength) {
+                            // Le remplissage englobe le pourcentage au milieu
+                            int rightFilled = filled - leftLength;
+                            int rightEmpty = rightLength - rightFilled;
 
-                        int rightFilled = Math.max(0, filled - leftLength);
-                        int rightEmpty = rightLength - rightFilled;
-
-                        String leftFilledStr = leftFilled > 0 ? colorFilled + barSymbol.repeat(leftFilled) + closeTag(colorFilled) : "";
-                        String leftEmptyStr = leftEmpty > 0 ? colorEmpty + barSymbol.repeat(leftEmpty) + closeTag(colorEmpty) : "";
-                        String leftStr = leftFilledStr + leftEmptyStr;
-
-                        String rightFilledStr = rightFilled > 0 ? colorFilled + barSymbol.repeat(rightFilled) + closeTag(colorFilled) : "";
-                        String rightEmptyStr = rightEmpty > 0 ? colorEmpty + barSymbol.repeat(rightEmpty) + closeTag(colorEmpty) : "";
-                        String rightStr = rightFilledStr + rightEmptyStr;
-
-                        bar = leftStr  + percentage  + rightStr;
+                            String filledPart = colorFilled + barSymbol.repeat(leftLength) + percentage + "%" + barSymbol.repeat(rightFilled) + closeTag(colorFilled);
+                            String emptyPart = rightEmpty > 0 ? colorEmpty + barSymbol.repeat(rightEmpty) + closeTag(colorEmpty) : "";
+                            bar = filledPart + emptyPart;
+                        } else {
+                            // Le remplissage s'arrête avant le pourcentage
+                            int leftEmpty = leftLength - filled;
+                            String filledPart = filled > 0 ? colorFilled + barSymbol.repeat(filled) + closeTag(colorFilled) : "";
+                            String emptyLeftPart = leftEmpty > 0 ? colorEmpty + barSymbol.repeat(leftEmpty) + closeTag(colorEmpty) : "";
+                            String emptyRightPart = rightLength > 0 ? colorEmpty + barSymbol.repeat(rightLength) + closeTag(colorEmpty) : "";
+                            bar = filledPart + emptyLeftPart + percentage + "%" + emptyRightPart;
+                        }
                     } else {
                         String filledStr = filled > 0 ? colorFilled + barSymbol.repeat(filled) + closeTag(colorFilled) : "";
                         String emptyStr = empty > 0 ? colorEmpty + barSymbol.repeat(empty) + closeTag(colorEmpty) : "";
@@ -181,28 +182,28 @@ public class QuotaGUI {
                     int surplusPercentage = percentage - 100;
                     int filledSurplus = (int) Math.round((surplusPercentage / 100.0) * barLength);
                     filledSurplus = Math.max(0, Math.min(barLength, filledSurplus));
-                    int filledBase = barLength - filledSurplus;
 
                     if (showPercentageInside) {
                         int leftLength = barLength / 2;
                         int rightLength = barLength - leftLength;
 
-                        int leftSurplus = Math.min(filledSurplus, leftLength);
-                        int leftBase = leftLength - leftSurplus;
+                        if (filledSurplus > leftLength) {
+                            // Le surplus englobe le pourcentage au milieu
+                            int rightSurplus = filledSurplus - leftLength;
+                            int rightBase = rightLength - rightSurplus;
 
-                        int rightSurplus = Math.max(0, filledSurplus - leftLength);
-                        int rightBase = rightLength - rightSurplus;
-
-                        String leftSurplusStr = leftSurplus > 0 ? surplusColorToUse + barSymbol.repeat(leftSurplus) + closeTag(surplusColorToUse) : "";
-                        String leftBaseStr = leftBase > 0 ? colorFilled + barSymbol.repeat(leftBase) + closeTag(colorFilled) : "";
-                        String leftStr = leftSurplusStr + leftBaseStr;
-
-                        String rightSurplusStr = rightSurplus > 0 ? surplusColorToUse + barSymbol.repeat(rightSurplus) + closeTag(surplusColorToUse) : "";
-                        String rightBaseStr = rightBase > 0 ? colorFilled + barSymbol.repeat(rightBase) + closeTag(colorFilled) : "";
-                        String rightStr = rightSurplusStr + rightBaseStr;
-
-                        bar = leftStr  + percentage  + rightStr;
+                            String surplusPart = surplusColorToUse + barSymbol.repeat(leftLength) + percentage + "%" + barSymbol.repeat(rightSurplus) + closeTag(surplusColorToUse);
+                            String basePart = rightBase > 0 ? colorFilled + barSymbol.repeat(rightBase) + closeTag(colorFilled) : "";
+                            bar = surplusPart + basePart;
+                        } else {
+                            // Le surplus s'arrête avant le pourcentage, donc la zone autour du pourcentage est la couleur de base (filled)
+                            int leftBase = leftLength - filledSurplus;
+                            String surplusPart = filledSurplus > 0 ? surplusColorToUse + barSymbol.repeat(filledSurplus) + closeTag(surplusColorToUse) : "";
+                            String basePart = colorFilled + barSymbol.repeat(leftBase) + percentage + "%" + barSymbol.repeat(rightLength) + closeTag(colorFilled);
+                            bar = surplusPart + basePart;
+                        }
                     } else {
+                        int filledBase = barLength - filledSurplus;
                         String surplusStr = filledSurplus > 0 ? surplusColorToUse + barSymbol.repeat(filledSurplus) + closeTag(surplusColorToUse) : "";
                         String baseStr = filledBase > 0 ? colorFilled + barSymbol.repeat(filledBase) + closeTag(colorFilled) : "";
                         bar = surplusStr + baseStr;

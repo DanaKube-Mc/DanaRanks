@@ -72,13 +72,19 @@ public class QuotaListener implements Listener {
                 String summary = (String) profile.getQuotaProgress().remove("quota_pending_summary");
                 boolean isGain = !summary.startsWith("-");
                 String eloColor = isGain ? "green" : "red";
-                String eloSign = isGain ? "+" : "";
+                String eloSign = isGain ? "+" : "-";
+
+                String valueOnly = summary;
+                if (summary.startsWith("+") || summary.startsWith("-")) {
+                    valueOnly = summary.substring(1);
+                }
+
                 player.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("quota-pending-summary",
                         "<blue>[Quotas] Vos quotas ont expiré pendant votre absence. Variation d'ELO : <%color%>%sign%%change%</%color%></blue>",
                         Map.of(
                             "%color%", eloColor,
                             "%sign%", eloSign,
-                            "%change%", summary,
+                            "%change%", valueOnly,
                             "%rank%", plugin.getRankDisplayName(profile.getRankLevel())
                         ), player));
             }

@@ -131,6 +131,10 @@ public class AdminCommandExecutor implements CommandExecutor {
                 }
             }
 
+            if (diff != 0 && plugin.getHistoryRepository() != null) {
+                plugin.getHistoryRepository().logHistory(profile.getUuid(), "RANK_CHANGE", 0, profile.getElo(), oldRank + " -> " + newRank);
+            }
+
             sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-rank-set-success",
                     "<green>Grade de %player% défini à %newrank% (anciennement %oldrank%).</green>",
                     Map.of("%player%", targetName, "%newrank%", String.valueOf(newRank), "%oldrank%", String.valueOf(oldRank))));
