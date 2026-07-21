@@ -40,6 +40,12 @@ messages:
     - "<#fdba5e><b>⚡ Rush prévu à %time% (Durée: %duration% minutes)!"
     - " "
     - "<#ffeea2>/rush join<#d4d9d8> pour vous inscrire !"
+  rush-started-announcement:
+    - " "
+    - "<#fdba5e><b>⚡ Le Rush sur la ressource %resource% vient de démarrer !</b>"
+    - "<#d4d9d8>Durée : <#fdba5e>%duration%</#fdba5e> minutes."
+    - "<#ffeea2>/rush join<#d4d9d8> pour participer !"
+    - " "
   rush-ended-win: "%prefix%Le Rush s'est terminé ! Vous avez gagné <#91f251>%change%</#91f251> !"
   rush-ended-loss: "%prefix%Le Rush s'est terminé ! Vous avez perdu <#fd5e5e>%change%</#fd5e5e> !"
   rush-discord-planned: "Le Rush quotidien débutera à <#ffeea2>%time%<#d4d9d8> pour <#ffeea2>%duration%<#d4d9d8> minutes ! Les inscriptions sont ouvertes via /rush join !"

@@ -338,6 +338,9 @@ public class RushManager {
             if (!state.isRushActive()) {
                 state.setRushActive(true);
                 visualManager.hideAnnounceBar();
+                Bukkit.broadcast(getMessageComponent("rush-started-announcement",
+                        "<#fdba5e><b>⚡ Le Rush sur la ressource %resource% vient de démarrer !</b>",
+                        Map.of("%resource%", plugin.getResourceDisplayName(state.getDailyResource()), "%duration%", String.valueOf(state.getDurationMinutes()))));
                 sendDiscordWebhook(formatMessage("rush-discord-started",
                         "[Rush] Le Rush quotidien sur la ressource %resource% vient de démarrer pour %duration% minutes !",
                         Map.of("%resource%", plugin.getResourceDisplayName(state.getDailyResource()), "%duration%", String.valueOf(state.getDurationMinutes()))));
