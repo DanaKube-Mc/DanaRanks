@@ -119,11 +119,11 @@ rush:
     announce:
       color: "BLUE"
       style: "PROGRESS"
-      title: "<blue>[Rush] Début du Rush dans %time% (Ressource: %resource%) - Tapez /rush join !"
+      title: "<blue>[Rush] Début du Rush dans <#ffeea2>%time%</#ffeea2> (Ressource: <#ffeea2>%resource%</#ffeea2>) - Tapez /rush join !"
     active:
       color: "RED"
       style: "PROGRESS"
-      title: "<red>[Rush] Temps restant : %time% - Votre Score : <gold>%score%</gold>"
+      title: "<red>[Rush] %resource% : <#ffeea2>%time%</#ffeea2> - Votre Score : <#ffeea2>%score%</#ffeea2>"
 
   # Paramètres ELO par groupe de niveau
   rank-settings:

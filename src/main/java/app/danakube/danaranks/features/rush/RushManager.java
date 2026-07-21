@@ -6,12 +6,18 @@ import app.danakube.danaranks.core.profile.PlayerProfile;
 import app.danakube.danaranks.database.DatabaseManager;
 import app.danakube.danaranks.database.HistoryRepository;
 import app.danakube.danaranks.database.ProfileRepository;
+import app.danakube.danaranks.features.quota.ObjectiveConfig;
+import app.danakube.danaranks.features.quota.QuotaConfig;
+import app.danakube.danaranks.features.quota.QuotaConfigLoader;
+import app.danakube.danaranks.features.quota.QuotaScheduler;
+import app.danakube.danaranks.features.quota.QuotaService;
 import app.danakube.danaranks.features.rush.ui.DiscordWebhook;
 import app.danakube.danaranks.features.rush.ui.RushBossBar;
 import app.danakube.danaranks.api.event.DanaRushStartEvent;
 import app.danakube.danaranks.api.event.DanaRushEndEvent;
 
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.command.CommandSender;
@@ -21,6 +27,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -151,12 +158,27 @@ public class RushManager {
 
     private void announceRegistration() {
         if (plugin == null) return;
+        LocalDateTime start = state.getStartTime();
+        String timeStr = "";
+        if (start != null) {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+            timeStr = start.format(formatter);
+        }
+        String durationStr = String.valueOf(state.getDurationMinutes());
+        String resourceName = plugin.getResourceDisplayName(state.getDailyResource());
+
+        Map<String, String> placeholders = Map.of(
+                "%resource%", resourceName,
+                "%time%", timeStr,
+                "%duration%", durationStr
+        );
+
         Bukkit.broadcast(getMessageComponent("rush-planned-announcement",
                 "<blue>[Rush] Le Rush quotidien sur la ressource <gold>%resource%</gold> est planifié ! Tapez <yellow>/rush join</yellow> pour vous inscrire !</blue>",
-                Map.of("%resource%", plugin.getResourceDisplayName(state.getDailyResource()))));
+                placeholders));
         sendDiscordWebhook(formatMessage("rush-discord-planned",
                 "[Rush] Le Rush sur la ressource %resource% est planifié pour aujourd'hui ! Les inscriptions sont ouvertes via /rush join !",
-                Map.of("%resource%", plugin.getResourceDisplayName(state.getDailyResource()))));
+                placeholders));
     }
 
     public boolean registerPlayer(UUID uuid, Instant now) {
@@ -316,6 +338,9 @@ public class RushManager {
             if (!state.isRushActive()) {
                 state.setRushActive(true);
                 visualManager.hideAnnounceBar();
+                Bukkit.broadcast(getMessageComponent("rush-started-announcement",
+                        "<#fdba5e><b>⚡ Le Rush sur la ressource %resource% vient de démarrer !</b>",
+                        Map.of("%resource%", plugin.getResourceDisplayName(state.getDailyResource()), "%duration%", String.valueOf(state.getDurationMinutes()))));
                 sendDiscordWebhook(formatMessage("rush-discord-started",
                         "[Rush] Le Rush quotidien sur la ressource %resource% vient de démarrer pour %duration% minutes !",
                         Map.of("%resource%", plugin.getResourceDisplayName(state.getDailyResource()), "%duration%", String.valueOf(state.getDurationMinutes()))));
@@ -361,6 +386,12 @@ public class RushManager {
 
         visualManager.hideAnnounceBar();
         visualManager.clearAllActiveBars();
+
+        if (Bukkit.getServer() != null) {
+            Bukkit.broadcast(getMessageComponent("admin-rush-ended",
+                    "<blue>[Rush] Le Rush d'aujourd'hui est terminé ! Calcul des ELO en cours...</blue>",
+                    java.util.Collections.emptyMap()));
+        }
 
         Map<UUID, Double> activeParticipants = new HashMap<>();
         for (Map.Entry<UUID, Double> entry : state.getRegisteredScores().entrySet()) {
@@ -443,7 +474,41 @@ public class RushManager {
             }
         }
 
-        RushEloCalculator.calculateOrphanEloChanges(orphans, scores, eloChanges, calculatorSettings);
+        Map<UUID, Double> orphanPercentageScores = new HashMap<>();
+        QuotaConfig quotaConfig = null;
+        QuotaScheduler quotaScheduler = null;
+        QuotaService quotaService = null;
+        if (plugin != null && plugin.getQuotaService() != null) {
+            quotaService = plugin.getQuotaService();
+            quotaConfig = quotaService.getQuotaConfig();
+            quotaScheduler = quotaService.getQuotaScheduler();
+        }
+        String resource = state.getDailyResource();
+
+        for (PlayerProfile p : orphans) {
+            double rawScore = scores.getOrDefault(p.getUuid(), 0.0);
+            double target = 1000.0;
+            int periodDays = 1;
+            if (quotaConfig != null && resource != null) {
+                ObjectiveConfig objConfig = 
+                        QuotaConfigLoader.getObjectiveConfig(quotaConfig, p.getRankLevel(), resource);
+                if (objConfig != null) {
+                    target = objConfig.target();
+                }
+            }
+            if (quotaService != null && quotaScheduler != null) {
+                int level = quotaService.getLevelFromRank(p.getRankLevel());
+                periodDays = quotaScheduler.getPeriodDays(level);
+            }
+            if (periodDays <= 0) {
+                periodDays = 1;
+            }
+            double dailyTarget = target / periodDays;
+            double percentage = rawScore / (dailyTarget > 0.0 ? dailyTarget : 1000.0);
+            orphanPercentageScores.put(p.getUuid(), percentage);
+        }
+
+        RushEloCalculator.calculateOrphanEloChanges(orphans, orphanPercentageScores, eloChanges, calculatorSettings);
 
         try {
             if (Bukkit.getServer() != null && Bukkit.getPluginManager() != null) {
@@ -547,7 +612,7 @@ public class RushManager {
         visualManager.hideAnnounceBar();
         sendDiscordWebhook(formatMessage("rush-discord-started",
                 "[Rush] Le Rush quotidien sur la ressource %resource% vient de démarrer pour %duration% minutes !",
-                Map.of("%resource%", plugin.getResourceDisplayName(resource), "%duration%", String.valueOf(durationMinutes))));
+                Map.of("%resource%", plugin.getResourceDisplayName(resource), "%duration%", String.valueOf(durationMinutes), "%time%", String.valueOf(durationMinutes))));
         try {
             if (Bukkit.getServer() != null && Bukkit.getPluginManager() != null) {
                 Bukkit.getPluginManager().callEvent(new DanaRushStartEvent(resource, durationMinutes, nowInstant));
@@ -555,9 +620,11 @@ public class RushManager {
         } catch (Exception e) {
             // Ignore
         }
-        Bukkit.broadcast(getMessageComponent("rush-started-announcement",
-                "<blue>[Rush] Un Rush compétitif vient de commencer sur la ressource <gold>%resource%</gold> pour <yellow>%duration%</yellow> minutes ! Tapez <green>/rush join</green> pour y participer !</blue>",
-                Map.of("%resource%", plugin.getResourceDisplayName(resource), "%duration%", String.valueOf(durationMinutes))));
+        if (Bukkit.getServer() != null) {
+            Bukkit.broadcast(getMessageComponent("admin-rush-started",
+                    "<blue>[Rush] Un Rush compétitif vient de commencer sur la ressource <gold>%resource%</gold> pour <yellow>%duration%</yellow> minutes ! Tapez <green>/rush join</green> pour y participer !</blue>",
+                    Map.of("%resource%", plugin.getResourceDisplayName(resource), "%duration%", String.valueOf(durationMinutes), "%time%", String.valueOf(durationMinutes))));
+        }
     }
 
     public void forceStopRush() {
@@ -566,9 +633,11 @@ public class RushManager {
         scoreTracker.clear();
         visualManager.clearAllActiveBars();
         visualManager.hideAnnounceBar();
-        Bukkit.broadcast(getMessageComponent("rush-stopped-announcement",
-                "<red>[Rush] Le Rush en cours a été arrêté prématurément par un administrateur. Aucune récompense ne sera distribuée.</red>",
-                java.util.Collections.emptyMap()));
+        if (Bukkit.getServer() != null) {
+            Bukkit.broadcast(getMessageComponent("admin-rush-stopped",
+                    "<red>[Rush] Le Rush en cours a été arrêté prématurément par un administrateur. Aucune récompense ne sera distribuée.</red>",
+                    java.util.Collections.emptyMap()));
+        }
     }
 
     public void reloadRushPlan() {
@@ -598,14 +667,52 @@ public class RushManager {
                 "[Rush] Un administrateur a planifié un Rush sur la ressource %resource% qui commencera dans %delay% minutes !",
                 Map.of("%resource%", plugin.getResourceDisplayName(resource), "%delay%", String.valueOf(delayMinutes))));
 
-        Bukkit.broadcast(getMessageComponent("rush-scheduled-admin",
-                "<blue>[Rush] Un administrateur a planifié un Rush sur la ressource <gold>%resource%</gold> qui commencera dans <yellow>%delay%</yellow> minutes ! Tapez <green>/rush join</green> pour y participer !</blue>",
-                Map.of("%resource%", plugin.getResourceDisplayName(resource), "%delay%", String.valueOf(delayMinutes))));
+        if (Bukkit.getServer() != null) {
+            Bukkit.broadcast(getMessageComponent("admin-rush-planned",
+                    "<blue>[Rush] Un administrateur a planifié un Rush sur la ressource <gold>%resource%</gold> qui commencera dans <yellow>%delay%</yellow> minutes ! Tapez <green>/rush join</green> pour y participer !</blue>",
+                    Map.of("%resource%", plugin.getResourceDisplayName(resource), "%delay%", String.valueOf(delayMinutes), "%duration%", String.valueOf(durationMinutes))));
+        }
     }
 
     private void broadcastRushSummary(List<PlayerProfile> profiles, Map<UUID, Integer> eloChanges, Map<UUID, Double> scores) {
+        if (plugin == null || plugin.getMessageManager() == null) {
+            return;
+        }
+        Map<UUID, Double> percentages = new HashMap<>();
+        QuotaConfig quotaConfig = null;
+        QuotaScheduler quotaScheduler = null;
+        QuotaService quotaService = null;
+        if (plugin.getQuotaService() != null) {
+            quotaService = plugin.getQuotaService();
+            quotaConfig = quotaService.getQuotaConfig();
+            quotaScheduler = quotaService.getQuotaScheduler();
+        }
+        String resource = state.getDailyResource();
+
+        for (PlayerProfile p : profiles) {
+            double rawScore = scores.getOrDefault(p.getUuid(), 0.0);
+            double target = 1000.0;
+            int periodDays = 1;
+            if (quotaConfig != null && resource != null) {
+                ObjectiveConfig objConfig = 
+                        QuotaConfigLoader.getObjectiveConfig(quotaConfig, p.getRankLevel(), resource);
+                if (objConfig != null) {
+                    target = objConfig.target();
+                }
+            }
+            if (quotaService != null && quotaScheduler != null) {
+                int level = quotaService.getLevelFromRank(p.getRankLevel());
+                periodDays = quotaScheduler.getPeriodDays(level);
+            }
+            if (periodDays <= 0) {
+                periodDays = 1;
+            }
+            double dailyTarget = target / periodDays;
+            percentages.put(p.getUuid(), rawScore / (dailyTarget > 0.0 ? dailyTarget : 1000.0));
+        }
+
         List<UUID> rankedUuids = new ArrayList<>(scores.keySet());
-        rankedUuids.sort((id1, id2) -> Double.compare(scores.getOrDefault(id2, 0.0), scores.getOrDefault(id1, 0.0)));
+        rankedUuids.sort((id1, id2) -> Double.compare(percentages.getOrDefault(id2, 0.0), percentages.getOrDefault(id1, 0.0)));
 
         Map<UUID, Integer> rankings = new HashMap<>();
         for (int i = 0; i < rankedUuids.size(); i++) {
@@ -613,16 +720,20 @@ public class RushManager {
         }
 
         class SummaryEntry {
+            final UUID uuid;
             final String name;
             final int rank;
             final double points;
             final int eloChange;
+            final int rankLevel;
 
-            SummaryEntry(String name, int rank, double points, int eloChange) {
+            SummaryEntry(UUID uuid, String name, int rank, double points, int eloChange, int rankLevel) {
+                this.uuid = uuid;
                 this.name = name;
                 this.rank = rank;
                 this.points = points;
                 this.eloChange = eloChange;
+                this.rankLevel = rankLevel;
             }
         }
 
@@ -632,24 +743,36 @@ public class RushManager {
             int rank = rankings.getOrDefault(uuid, 99);
             double points = scores.getOrDefault(uuid, 0.0);
             int eloChange = eloChanges.getOrDefault(uuid, 0);
-            entries.add(new SummaryEntry(profile.getPlayerName(), rank, points, eloChange));
+            entries.add(new SummaryEntry(uuid, profile.getPlayerName(), rank, points, eloChange, profile.getRankLevel()));
         }
 
         entries.sort((e1, e2) -> Integer.compare(e2.eloChange, e1.eloChange));
 
-        List<String> lines = new ArrayList<>();
-        lines.add("<gold><b>[Rush] Résumé de l'événement de Rush :</b></gold>");
-        for (SummaryEntry entry : entries) {
-            String eloSign = entry.eloChange >= 0 ? "+" : "";
-            String eloColor = entry.eloChange >= 0 ? "green" : "red";
-            String line = String.format("<yellow>#%d</yellow> <white><hover:show_text:'<gray>Cliquez pour voir le profil de %s</gray>'><click:run_command:'/profile %s'>%s</click></hover></white> - <aqua>%.0f pts</aqua> (<%s>%s%d ELO</%s>)",
-                    entry.rank, entry.name, entry.name, entry.name, entry.points, eloColor, eloSign, entry.eloChange, eloColor);
-            lines.add(line);
-        }
-
         if (Bukkit.getServer() != null) {
-            for (String line : lines) {
-                Bukkit.getServer().broadcast(MiniMessage.miniMessage().deserialize(line));
+            Component header = plugin.getMessageManager().getMessageComponent("rush-summary-header",
+                    "<gold><b>[Rush] Résumé de l'événement de Rush :</b></gold>");
+            Bukkit.getServer().broadcast(header);
+
+            for (SummaryEntry entry : entries) {
+                String eloSign = entry.eloChange >= 0 ? "+" : "-";
+                String eloColor = entry.eloChange >= 0 ? "green" : "red";
+
+                OfflinePlayer playerOfLine = Bukkit.getOfflinePlayer(entry.uuid);
+                String rankDisplayName = plugin.getRankDisplayName(entry.rankLevel);
+
+                Component line = plugin.getMessageManager().getMessageComponentForPlayer("rush-summary-format",
+                        "<yellow>#%pos%</yellow> <white><hover:show_text:'<gray>Cliquez pour voir le profil de %player%</gray>'><click:run_command:'/profile %player%'>%player%</click></hover></white> - <aqua>%score% pts</aqua> (<%color%>%sign%%change% ELO</%color>)",
+                        Map.of(
+                            "%pos%", String.valueOf(entry.rank),
+                            "%player%", entry.name,
+                            "%score%", String.format("%.0f", entry.points),
+                            "%color%", eloColor,
+                            "%sign%", eloSign,
+                            "%change%", String.valueOf(Math.abs(entry.eloChange)),
+                            "%rank%", rankDisplayName,
+                            "%rang%", rankDisplayName
+                        ), playerOfLine);
+                Bukkit.getServer().broadcast(line);
             }
         }
     }
@@ -669,16 +792,33 @@ public class RushManager {
         sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-registered-count", "<white>Nombre d'inscrits : <yellow>%count%</yellow></white>", Map.of("%count%", String.valueOf(getRegisteredPlayersCount()))));
 
         if (getRegisteredPlayersCount() > 0) {
-            sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-scores-header", "<white>Scores des inscrits :</white>"));
+            Player pSender = (sender instanceof Player p) ? p : null;
+            sender.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("rush-info-scores-header", "<white>Scores des inscrits :</white>", pSender));
             Map<UUID, Double> scores = state.getRegisteredScores();
             scores.entrySet().stream()
                 .sorted((e1, e2) -> Double.compare(e2.getValue(), e1.getValue()))
                 .forEach(e -> {
-                    String name = Bukkit.getOfflinePlayer(e.getKey()).getName();
-                    String nameStr = name != null ? name : e.getKey().toString();
-                    sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-score-line",
+                    UUID uuid = e.getKey();
+                    String name = Bukkit.getOfflinePlayer(uuid).getName();
+                    String nameStr = name != null ? name : uuid.toString();
+
+                    int rankLevel = 1;
+                    PlayerProfile profile = getProfileCacheMap().get(uuid);
+                    if (profile != null) {
+                        rankLevel = profile.getRankLevel();
+                    }
+                    String rankDisplayName = plugin.getRankDisplayName(rankLevel);
+
+                    OfflinePlayer playerOfLine = Bukkit.getOfflinePlayer(uuid);
+
+                    sender.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("rush-info-score-line",
                             " - <white>%player%</white> : <green>%score% pts</green>",
-                            Map.of("%player%", nameStr, "%score%", String.format("%.0f", e.getValue()))));
+                            Map.of(
+                                "%player%", nameStr,
+                                "%score%", String.format("%.0f", e.getValue()),
+                                "%rank%", rankDisplayName,
+                                "%rang%", rankDisplayName
+                            ), playerOfLine));
                 });
         }
     }

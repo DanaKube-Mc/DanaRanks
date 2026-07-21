@@ -5,8 +5,12 @@ import app.danakube.danaranks.core.DanaRanks;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.IOException;
@@ -55,17 +59,27 @@ public class MessageManager {
         FileConfiguration config = YamlConfiguration.loadConfiguration(langFile);
         if (config.isConfigurationSection("messages")) {
             for (String key : config.getConfigurationSection("messages").getKeys(false)) {
-                String value = config.getString("messages." + key);
-                if (value != null) {
-                    messages.put(key, value);
+                String path = "messages." + key;
+                if (config.isList(path)) {
+                    messages.put(key, String.join("\n", config.getStringList(path)));
+                } else {
+                    String value = config.getString(path);
+                    if (value != null) {
+                        messages.put(key, value);
+                    }
                 }
             }
         }
         if (config.isConfigurationSection("resources")) {
             for (String key : config.getConfigurationSection("resources").getKeys(false)) {
-                String value = config.getString("resources." + key);
-                if (value != null) {
-                    messages.put("resources." + key, value);
+                String path = "resources." + key;
+                if (config.isList(path)) {
+                    messages.put("resources." + key, String.join("\n", config.getStringList(path)));
+                } else {
+                    String value = config.getString(path);
+                    if (value != null) {
+                        messages.put("resources." + key, value);
+                    }
                 }
             }
         }
@@ -99,12 +113,36 @@ public class MessageManager {
         return raw.replace("%prefix%", prefix).replace("%prefixe%", prefix);
     }
 
+    private String applyPlaceholderAPI(OfflinePlayer player, String text) {
+        if (player != null && Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            try {
+                return PlaceholderAPIHook.setPlaceholders(player, text);
+            } catch (Throwable t) {
+                // Ignore
+            }
+        }
+        return text;
+    }
+
     public String getRawMessage(String key, String defaultValue) {
+        return getRawMessageForPlayer(key, defaultValue, (OfflinePlayer) null);
+    }
+
+    public String getRawMessageForPlayer(String key, String defaultValue, OfflinePlayer player) {
         String raw = messages.getOrDefault(key, defaultValue);
-        return resolvePrefix(raw);
+        raw = resolvePrefix(raw);
+        return applyPlaceholderAPI(player, raw);
+    }
+
+    public String getRawMessageForPlayer(String key, String defaultValue, Player player) {
+        return getRawMessageForPlayer(key, defaultValue, (OfflinePlayer) player);
     }
 
     public String getMessage(String key, String defaultValue) {
+        return getMessageForPlayer(key, defaultValue, (OfflinePlayer) null);
+    }
+
+    public String getMessageForPlayer(String key, String defaultValue, OfflinePlayer player) {
         String raw = messages.get(key);
         if (raw == null) {
             raw = defaultValue;
@@ -113,15 +151,28 @@ public class MessageManager {
             return null;
         }
         raw = resolvePrefix(raw);
+        raw = applyPlaceholderAPI(player, raw);
         Component component = MiniMessage.miniMessage().deserialize(raw);
         return LegacyComponentSerializer.legacySection().serialize(component);
     }
 
+    public String getMessageForPlayer(String key, String defaultValue, Player player) {
+        return getMessageForPlayer(key, defaultValue, (OfflinePlayer) player);
+    }
+
     public String getMessage(String key) {
-        return getMessage(key, "");
+        return getMessageForPlayer(key, "", (OfflinePlayer) null);
+    }
+
+    public String getMessageForPlayer(String key, Player player) {
+        return getMessageForPlayer(key, "", (OfflinePlayer) player);
     }
 
     public Component getMessageComponent(String key, String defaultValue) {
+        return getMessageComponentForPlayer(key, defaultValue, (OfflinePlayer) null);
+    }
+
+    public Component getMessageComponentForPlayer(String key, String defaultValue, OfflinePlayer player) {
         String raw = messages.get(key);
         if (raw == null) {
             raw = defaultValue;
@@ -130,10 +181,19 @@ public class MessageManager {
             return Component.empty();
         }
         raw = resolvePrefix(raw);
+        raw = applyPlaceholderAPI(player, raw);
         return MiniMessage.miniMessage().deserialize(raw);
     }
 
+    public Component getMessageComponentForPlayer(String key, String defaultValue, Player player) {
+        return getMessageComponentForPlayer(key, defaultValue, (OfflinePlayer) player);
+    }
+
     public Component getMessageComponent(String key, String defaultValue, Map<String, String> placeholders) {
+        return getMessageComponentForPlayer(key, defaultValue, placeholders, (OfflinePlayer) null);
+    }
+
+    public Component getMessageComponentForPlayer(String key, String defaultValue, Map<String, String> placeholders, OfflinePlayer player) {
         String raw = messages.get(key);
         if (raw == null) {
             raw = defaultValue;
@@ -147,11 +207,20 @@ public class MessageManager {
                 raw = raw.replace(entry.getKey(), entry.getValue());
             }
         }
+        raw = applyPlaceholderAPI(player, raw);
         return MiniMessage.miniMessage().deserialize(raw);
     }
 
+    public Component getMessageComponentForPlayer(String key, String defaultValue, Map<String, String> placeholders, Player player) {
+        return getMessageComponentForPlayer(key, defaultValue, placeholders, (OfflinePlayer) player);
+    }
+
     public Component getMessageComponent(String key) {
-        return getMessageComponent(key, "");
+        return getMessageComponentForPlayer(key, "", (OfflinePlayer) null);
+    }
+
+    public Component getMessageComponentForPlayer(String key, Player player) {
+        return getMessageComponentForPlayer(key, "", (OfflinePlayer) player);
     }
 }
 

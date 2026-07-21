@@ -60,9 +60,10 @@ public class QuotaListener implements Listener {
             player.kick(kickMessage);
         } else {
             PlayerProfile profile = profileOpt.get();
-            Component loadedMessage = plugin.getMessageManager().getMessageComponent(
+            Component loadedMessage = plugin.getMessageManager().getMessageComponentForPlayer(
                     "profile-loaded",
-                    "&aVotre profil de rang a été correctement chargé !"
+                    "&aVotre profil de rang a été correctement chargé !",
+                    player
             );
             player.sendMessage(loadedMessage);
 
@@ -71,23 +72,34 @@ public class QuotaListener implements Listener {
                 String summary = (String) profile.getQuotaProgress().remove("quota_pending_summary");
                 boolean isGain = !summary.startsWith("-");
                 String eloColor = isGain ? "green" : "red";
-                String eloSign = isGain ? "+" : "";
-                player.sendMessage(plugin.getMessageManager().getMessageComponent("quota-pending-summary",
+                String eloSign = isGain ? "+" : "-";
+
+                String valueOnly = summary;
+                if (summary.startsWith("+") || summary.startsWith("-")) {
+                    valueOnly = summary.substring(1);
+                }
+
+                player.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("quota-pending-summary",
                         "<blue>[Quotas] Vos quotas ont expiré pendant votre absence. Variation d'ELO : <%color%>%sign%%change%</%color%></blue>",
-                        Map.of("%color%", eloColor, "%sign%", eloSign, "%change%", summary)));
+                        Map.of(
+                            "%color%", eloColor,
+                            "%sign%", eloSign,
+                            "%change%", valueOnly,
+                            "%rank%", plugin.getRankDisplayName(profile.getRankLevel())
+                        ), player));
             }
 
             // 2. Affichage des quotas actuels et de leur progression
             try {
                 int activeRank = plugin.getQuotaService().getProgressTracker().getActiveQuotaRank(profile);
                 Map<String, ObjectiveConfig> objectives = plugin.getQuotaService().getProgressTracker().getActiveObjectives(profile);
-                player.sendMessage(plugin.getMessageManager().getMessageComponent("quota-join-header",
-                        "<aqua><b>[Quotas] Vos objectifs actuels (Rang %rank%) :</b></aqua>", Map.of("%rank%", plugin.getRankDisplayName(activeRank))));
+                player.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("quota-join-header",
+                        "<aqua><b>[Quotas] Vos objectifs actuels (Rang %rank%) :</b></aqua>", Map.of("%rank%", plugin.getRankDisplayName(activeRank)), player));
                 for (ObjectiveConfig obj : objectives.values()) {
                     double progress = plugin.getQuotaService().getProgressTracker().getProgress(profile, obj.name());
-                    player.sendMessage(plugin.getMessageManager().getMessageComponent("quota-join-objective-line",
+                    player.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("quota-join-objective-line",
                             " - <yellow>%resource% : %progress% / %target%</yellow>",
-                            Map.of("%resource%", plugin.getResourceDisplayName(obj.name()), "%progress%", String.format("%.0f", progress), "%target%", String.format("%.0f", obj.target()))));
+                            Map.of("%resource%", plugin.getResourceDisplayName(obj.name()), "%progress%", String.format("%.0f", progress), "%target%", String.format("%.0f", obj.target())), player));
                 }
             } catch (Exception e) {
                 // Ignore safe fallback
@@ -101,9 +113,13 @@ public class QuotaListener implements Listener {
                     if (start != null) {
                         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
                         String timeStr = start.format(formatter);
-                        player.sendMessage(plugin.getMessageManager().getMessageComponent("quota-rush-planned-announcement",
+                        player.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("quota-rush-planned-announcement",
                                 "<gold>[Rush] Un Rush quotidien est planifié aujourd'hui à <yellow>%time%</yellow> ! Ne le manquez pas !</gold>",
-                                Map.of("%time%", timeStr)));
+                                Map.of(
+                                    "%time%", timeStr,
+                                    "%duration%", String.valueOf(rm.getDurationMinutes()),
+                                    "%resource%", plugin.getResourceDisplayName(rm.getDailyResource())
+                                ), player));
                     }
                 }
             } catch (Exception e) {

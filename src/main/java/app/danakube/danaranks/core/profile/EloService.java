@@ -55,6 +55,9 @@ public class EloService {
             if (historyRepository != null) {
                 try {
                     historyRepository.logHistory(profile.getUuid(), reason, eloChange, newElo, reason);
+                    if (rankChange != 0) {
+                        historyRepository.logHistory(profile.getUuid(), "RANK_CHANGE", 0, newElo, oldRank + " -> " + newRank);
+                    }
                 } catch (Exception e) {
                     // Safety for tests
                 }

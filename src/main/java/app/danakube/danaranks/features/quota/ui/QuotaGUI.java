@@ -90,10 +90,26 @@ public class QuotaGUI {
         String barSymbolEmpty = config.getString("menus.quota.objectives.bar-symbol-empty", "░");
         int barSize = config.getInt("menus.quota.objectives.bar-size", 10);
 
+        boolean useCustomBar = config.contains("menus.quota.progress-bar") || config.contains("menus.quota.objectives.progress-bar");
+        int barLength = config.getInt("menus.quota.progress-bar.length", 10);
+        if (barLength <= 0) {
+            barLength = config.getInt("menus.quota.objectives.progress-bar.length", 10);
+        }
+        String barSymbol = config.getString("menus.quota.progress-bar.symbol", config.getString("menus.quota.objectives.progress-bar.symbol", "█"));
+        String colorFilled = config.getString("menus.quota.progress-bar.color-filled", config.getString("menus.quota.objectives.progress-bar.color-filled", ""));
+        String colorSurplus = config.getString("menus.quota.progress-bar.color-surplus", config.getString("menus.quota.objectives.progress-bar.color-surplus", ""));
+        String colorEmpty = config.getString("menus.quota.progress-bar.color-empty", config.getString("menus.quota.objectives.progress-bar.color-empty", ""));
+        boolean showPercentageInside = config.getBoolean("menus.quota.progress-bar.show-percentage-inside", config.getBoolean("menus.quota.objectives.progress-bar.show-percentage-inside", false));
+
         List<Integer> objectiveSlots = config.getIntegerList("menus.quota.slots");
         if (objectiveSlots.isEmpty()) objectiveSlots = config.getIntegerList("menus.quota.slot");
         if (objectiveSlots.isEmpty()) objectiveSlots = config.getIntegerList("menus.quota.objectives.slots");
         if (objectiveSlots.isEmpty()) objectiveSlots = config.getIntegerList("menus.quota.objectives.slot");
+
+        List<String> loreTemplate = config.getStringList("menus.quota.objectives.lore");
+        if (loreTemplate.isEmpty()) {
+            loreTemplate = config.getStringList("menus.quota.format.lore");
+        }
 
         int objIdx = 0;
         int currentSlot = 0;
@@ -113,11 +129,91 @@ public class QuotaGUI {
 
             double progress = plugin.getQuotaService().getProgressTracker().getProgress(profile, obj.name());
             double target = obj.target();
-            int percentage = (int) Math.min(100, Math.round((progress / target) * 100));
+            double surplusMultiplier = plugin.getQuotaService().getQuotaConfig().surplusMultiplier();
 
-            int filledCount = (int) Math.round((progress / target) * barSize);
-            filledCount = Math.max(0, Math.min(barSize, filledCount));
-            String bar = barSymbolFilled.repeat(filledCount) + barSymbolEmpty.repeat(barSize - filledCount);
+            // Calcul du pourcentage sur l'échelle 0% à 200%
+            int percentage;
+            if (progress <= target) {
+                percentage = (int) Math.min(100, Math.round((progress / target) * 100));
+            } else {
+                double diff = progress - target;
+                double maxDiff = target * (surplusMultiplier - 1.0);
+                double fraction = maxDiff > 0 ? Math.min(1.0, diff / maxDiff) : 0;
+                percentage = 100 + (int) Math.round(fraction * 100);
+            }
+
+            String bar;
+            if (useCustomBar) {
+                String surplusColorToUse = colorSurplus.isEmpty() ? colorFilled : colorSurplus;
+
+                if (percentage <= 100) {
+                    // Phase 1 : Remplissage de la base de 0% à 100% (filled vs empty)
+                    int filled = (int) Math.round((percentage / 100.0) * barLength);
+                    filled = Math.max(0, Math.min(barLength, filled));
+                    int empty = barLength - filled;
+
+                    if (showPercentageInside) {
+                        int leftLength = barLength / 2;
+                        int rightLength = barLength - leftLength;
+
+                        if (filled > leftLength) {
+                            // Le remplissage englobe le pourcentage au milieu
+                            int rightFilled = filled - leftLength;
+                            int rightEmpty = rightLength - rightFilled;
+
+                            String filledPart = colorFilled + barSymbol.repeat(leftLength) + percentage + "%" + barSymbol.repeat(rightFilled) + closeTag(colorFilled);
+                            String emptyPart = rightEmpty > 0 ? colorEmpty + barSymbol.repeat(rightEmpty) + closeTag(colorEmpty) : "";
+                            bar = filledPart + emptyPart;
+                        } else {
+                            // Le remplissage s'arrête avant le pourcentage
+                            int leftEmpty = leftLength - filled;
+                            String filledPart = filled > 0 ? colorFilled + barSymbol.repeat(filled) + closeTag(colorFilled) : "";
+                            String emptyLeftPart = leftEmpty > 0 ? colorEmpty + barSymbol.repeat(leftEmpty) + closeTag(colorEmpty) : "";
+                            String emptyRightPart = rightLength > 0 ? colorEmpty + barSymbol.repeat(rightLength) + closeTag(colorEmpty) : "";
+                            bar = filledPart + emptyLeftPart + percentage + "%" + emptyRightPart;
+                        }
+                    } else {
+                        String filledStr = filled > 0 ? colorFilled + barSymbol.repeat(filled) + closeTag(colorFilled) : "";
+                        String emptyStr = empty > 0 ? colorEmpty + barSymbol.repeat(empty) + closeTag(colorEmpty) : "";
+                        bar = filledStr + emptyStr;
+                    }
+                } else {
+                    // Phase 2 : Remplissage du surplus de 100% à 200% (surplus vs filled)
+                    int surplusPercentage = percentage - 100;
+                    int filledSurplus = (int) Math.round((surplusPercentage / 100.0) * barLength);
+                    filledSurplus = Math.max(0, Math.min(barLength, filledSurplus));
+
+                    if (showPercentageInside) {
+                        int leftLength = barLength / 2;
+                        int rightLength = barLength - leftLength;
+
+                        if (filledSurplus > leftLength) {
+                            // Le surplus englobe le pourcentage au milieu
+                            int rightSurplus = filledSurplus - leftLength;
+                            int rightBase = rightLength - rightSurplus;
+
+                            String surplusPart = surplusColorToUse + barSymbol.repeat(leftLength) + percentage + "%" + barSymbol.repeat(rightSurplus) + closeTag(surplusColorToUse);
+                            String basePart = rightBase > 0 ? colorFilled + barSymbol.repeat(rightBase) + closeTag(colorFilled) : "";
+                            bar = surplusPart + basePart;
+                        } else {
+                            // Le surplus s'arrête avant le pourcentage, donc la zone autour du pourcentage est la couleur de base (filled)
+                            int leftBase = leftLength - filledSurplus;
+                            String surplusPart = filledSurplus > 0 ? surplusColorToUse + barSymbol.repeat(filledSurplus) + closeTag(surplusColorToUse) : "";
+                            String basePart = colorFilled + barSymbol.repeat(leftBase) + percentage + "%" + barSymbol.repeat(rightLength) + closeTag(colorFilled);
+                            bar = surplusPart + basePart;
+                        }
+                    } else {
+                        int filledBase = barLength - filledSurplus;
+                        String surplusStr = filledSurplus > 0 ? surplusColorToUse + barSymbol.repeat(filledSurplus) + closeTag(surplusColorToUse) : "";
+                        String baseStr = filledBase > 0 ? colorFilled + barSymbol.repeat(filledBase) + closeTag(colorFilled) : "";
+                        bar = surplusStr + baseStr;
+                    }
+                }
+            } else {
+                int filledCount = (int) Math.round((progress / target) * barSize);
+                filledCount = Math.max(0, Math.min(barSize, filledCount));
+                bar = barSymbolFilled.repeat(filledCount) + barSymbolEmpty.repeat(barSize - filledCount);
+            }
 
             String formattedName = format.replace("%resource%", plugin.getResourceDisplayName(obj.name()))
                     .replace("%progress%", String.format("%.0f", progress))
@@ -125,15 +221,32 @@ public class QuotaGUI {
                     .replace("%percentage%", percentage + "%")
                     .replace("%bar%", bar);
 
-            String baseRewardFormat = config.getString("menus.quota.format.base-reward", "<gray>Base reward : <gold>+%elo% ELO</gold></gray>");
-            String maxSurplusFormat = config.getString("menus.quota.format.max-surplus", "<gray>Max surplus : <gold>+%elo% ELO</gold></gray>");
-            String failPenaltyFormat = config.getString("menus.quota.format.fail-penalty", "<gray>Failure penalty : <red>-%elo% ELO</red></gray>");
-
             List<String> lore = new ArrayList<>();
-            lore.add(baseRewardFormat.replace("%elo%", String.valueOf(obj.baseElo())));
-            lore.add(maxSurplusFormat.replace("%elo%", String.valueOf(obj.maxSurplusElo())));
-            if (obj.failPenalty() > 0) {
-                lore.add(failPenaltyFormat.replace("%elo%", String.valueOf(obj.failPenalty())));
+            if (loreTemplate.isEmpty()) {
+                String baseRewardFormat = config.getString("menus.quota.format.base-reward", "<gray>Base reward : <gold>+%elo% ELO</gold></gray>");
+                String maxSurplusFormat = config.getString("menus.quota.format.max-surplus", "<gray>Max surplus : <gold>+%elo% ELO</gold></gray>");
+                String failPenaltyFormat = config.getString("menus.quota.format.fail-penalty", "<gray>Failure penalty : <red>-%elo% ELO</red></gray>");
+
+                lore.add(baseRewardFormat.replace("%elo%", String.valueOf(obj.baseElo())));
+                lore.add(maxSurplusFormat.replace("%elo%", String.valueOf(obj.maxSurplusElo())));
+                if (obj.failPenalty() > 0) {
+                    lore.add(failPenaltyFormat.replace("%elo%", String.valueOf(obj.failPenalty())));
+                }
+            } else {
+                for (String line : loreTemplate) {
+                    if (line.contains("%fail_penalty%") && obj.failPenalty() <= 0) {
+                        continue;
+                    }
+                    lore.add(line
+                            .replace("%base_elo%", String.valueOf(obj.baseElo()))
+                            .replace("%max_surplus%", String.valueOf(obj.maxSurplusElo()))
+                            .replace("%fail_penalty%", String.valueOf(obj.failPenalty()))
+                            .replace("%progress%", String.format("%.0f", progress))
+                            .replace("%target%", String.format("%.0f", target))
+                            .replace("%percentage%", percentage + "%")
+                            .replace("%bar%", bar)
+                    );
+                }
             }
 
             Material objMat = null;
@@ -158,5 +271,20 @@ public class QuotaGUI {
         }
 
         player.openInventory(inv);
+    }
+
+    private String closeTag(String tag) {
+        if (tag == null || tag.isEmpty()) return "";
+        if (tag.contains("gradient")) return "</gradient>";
+        if (tag.contains("color")) return "</color>";
+        if (tag.startsWith("<#")) return "";
+        if (tag.startsWith("<") && tag.endsWith(">")) {
+            String name = tag.substring(1, tag.length() - 1);
+            if (name.contains(":")) {
+                name = name.split(":")[0];
+            }
+            return "</" + name + ">";
+        }
+        return "";
     }
 }
