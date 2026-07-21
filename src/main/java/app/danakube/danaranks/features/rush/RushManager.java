@@ -675,20 +675,21 @@ public class RushManager {
     }
 
     private void broadcastRushSummary(List<PlayerProfile> profiles, Map<UUID, Integer> eloChanges, Map<UUID, Double> scores) {
+        if (plugin == null || plugin.getMessageManager() == null) {
+            return;
+        }
         Map<UUID, Double> percentages = new HashMap<>();
         QuotaConfig quotaConfig = null;
         QuotaScheduler quotaScheduler = null;
         QuotaService quotaService = null;
-        if (plugin != null && plugin.getQuotaService() != null) {
+        if (plugin.getQuotaService() != null) {
             quotaService = plugin.getQuotaService();
             quotaConfig = quotaService.getQuotaConfig();
             quotaScheduler = quotaService.getQuotaScheduler();
         }
         String resource = state.getDailyResource();
 
-        Map<UUID, PlayerProfile> profileMap = new HashMap<>();
         for (PlayerProfile p : profiles) {
-            profileMap.put(p.getUuid(), p);
             double rawScore = scores.getOrDefault(p.getUuid(), 0.0);
             double target = 1000.0;
             int periodDays = 1;
@@ -806,7 +807,7 @@ public class RushManager {
                     if (profile != null) {
                         rankLevel = profile.getRankLevel();
                     }
-                    String rankDisplayName = plugin != null ? plugin.getRankDisplayName(rankLevel) : "Rang " + rankLevel;
+                    String rankDisplayName = plugin.getRankDisplayName(rankLevel);
 
                     OfflinePlayer playerOfLine = Bukkit.getOfflinePlayer(uuid);
 
