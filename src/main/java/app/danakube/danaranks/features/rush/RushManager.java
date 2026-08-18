@@ -293,7 +293,8 @@ public class RushManager {
                 long remainingSecs = totalSecs - elapsedSecs;
                 float progress = (float) remainingSecs / totalSecs;
 
-                visualManager.showOrUpdateActiveBar(player, formatTime(remainingSecs), getPlayerScore(uuid), progress);
+                String resourceName = plugin.getResourceDisplayName(state.getDailyResource());
+                visualManager.showOrUpdateActiveBar(player, formatTime(remainingSecs), getPlayerScore(uuid), progress, resourceName);
             }
         }
     }
@@ -361,7 +362,8 @@ public class RushManager {
             for (UUID uuid : state.getRegisteredScores().keySet()) {
                 Player player = Bukkit.getPlayer(uuid);
                 if (player != null) {
-                    visualManager.showOrUpdateActiveBar(player, formatTime(remainingSecs), getPlayerScore(uuid), progress);
+                    String resourceName = plugin.getResourceDisplayName(state.getDailyResource());
+                    visualManager.showOrUpdateActiveBar(player, formatTime(remainingSecs), getPlayerScore(uuid), progress, resourceName);
                 }
             }
         }

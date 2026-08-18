@@ -48,11 +48,13 @@ public class RushListener implements Listener {
                     long remainingSecs = totalSecs - elapsedSecs;
                     float progress = (float) remainingSecs / totalSecs;
                     double score = state.getRegisteredScores().getOrDefault(player.getUniqueId(), 0.0);
-                    rushManager.getVisualManager().showOrUpdateActiveBar(player, rushManager.formatTime(remainingSecs), score, progress);
+                    String resourceName = plugin.getResourceDisplayName(state.getDailyResource());
+                    rushManager.getVisualManager().showOrUpdateActiveBar(player, rushManager.formatTime(remainingSecs), score, progress, resourceName);
                 }
             } else if (!now.isBefore(preAnnounceInstant) && now.isBefore(startInstant)) {
                 long remainingSecs = startInstant.getEpochSecond() - now.getEpochSecond();
-                rushManager.getVisualManager().showAnnounceBar(rushManager.formatTime(remainingSecs), state.getDailyResource());
+                String resourceName = plugin.getResourceDisplayName(state.getDailyResource());
+                rushManager.getVisualManager().showAnnounceBar(rushManager.formatTime(remainingSecs), resourceName);
             }
         }
     }

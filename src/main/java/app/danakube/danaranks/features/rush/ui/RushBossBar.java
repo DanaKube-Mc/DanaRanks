@@ -84,13 +84,15 @@ public class RushBossBar {
         }
     }
 
-    public void showOrUpdateActiveBar(Player player, String timeStr, double score, float progress) {
+    public void showOrUpdateActiveBar(Player player, String timeStr, double score, float progress, String resourceName) {
         UUID uuid = player.getUniqueId();
         BossBar bar = activeBars.get(uuid);
         
         String formattedScore = String.format("%.0f", score);
         Component title = MiniMessage.miniMessage().deserialize(
-                activeTitleTemplate.replace("%time%", timeStr).replace("%score%", formattedScore)
+                activeTitleTemplate.replace("%time%", timeStr)
+                                   .replace("%score%", formattedScore)
+                                   .replace("%resource%", resourceName)
         );
 
         float safeProgress = Math.max(0.0f, Math.min(1.0f, progress));
