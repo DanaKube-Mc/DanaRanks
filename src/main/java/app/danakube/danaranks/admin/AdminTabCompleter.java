@@ -49,7 +49,11 @@ public class AdminTabCompleter implements TabCompleter {
         if (args.length == 4 && args[0].equalsIgnoreCase("admin") && args[1].equalsIgnoreCase("rush")) {
             String subRush = args[2].toLowerCase();
             if (subRush.equals("start")) {
-                List<String> resources = List.of("lumens-gained", "lumens-spent", "job-xp", "tool-xp", "vanilla-xp-gained", "vanilla-xp-spent");
+                List<String> resources = List.of(
+                        "lumens-gained", "lumens-spent",
+                        "job-xp-all", "job-xp-mineur", "job-xp-bucheron", "job-xp-fermier", "job-xp-pecheur", "job-xp-traqueur",
+                        "tool-xp", "vanilla-xp-gained", "vanilla-xp-spent"
+                );
                 return filterCompletions(resources, args[3]);
             } else if (List.of("add", "leave").contains(subRush)) {
                 List<String> playerNames = new ArrayList<>();

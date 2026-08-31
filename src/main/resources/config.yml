@@ -23,6 +23,7 @@ anti-abuse:
   blocked-plugin-packages:
     - "quickshop"
     - "axtrade"
+    - "superiorskyblock"
 
 # Configuration des resets globaux
 reset:

@@ -270,10 +270,18 @@ public class RushManager {
 
     public void handleResourceGain(UUID uuid, String resource, double amount, Instant now) {
         if (!state.isDailyPlanned() || state.getDailyResource() == null) return;
-        String normalizedResource = resource.replace("-", "_");
-        String normalizedDaily = state.getDailyResource().replace("-", "_");
+        String normalizedResource = resource.replace("-", "_").toLowerCase();
+        String normalizedDaily = state.getDailyResource().replace("-", "_").toLowerCase();
 
-        if (!normalizedResource.equalsIgnoreCase(normalizedDaily)) return;
+        boolean matches = normalizedResource.equalsIgnoreCase(normalizedDaily);
+        if (!matches) {
+            if ((normalizedDaily.equals("job_xp_all")) &&
+                (normalizedResource.equals("job_xp_all"))) {
+                matches = true;
+            }
+        }
+
+        if (!matches) return;
         if (!isRushActive(now)) return;
         if (!scoreTracker.isRegistered(uuid)) return;
 
