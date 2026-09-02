@@ -34,6 +34,16 @@ public class ProfileRepository {
                 ps.setString(1, uuid.toString());
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
+                        String dbName = rs.getString("player_name");
+                        String resolvedName = dbName;
+                        if (resolvedName == null || resolvedName.isEmpty() || resolvedName.equalsIgnoreCase("OfflinePlayer")) {
+                            if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("OfflinePlayer")) {
+                                resolvedName = name;
+                            } else {
+                                resolvedName = "Joueur";
+                            }
+                        }
+
                         int rank = rs.getInt("rank_level");
                         int elo = rs.getInt("elo");
                         Timestamp ts = rs.getTimestamp("last_reset");
@@ -45,7 +55,7 @@ public class ProfileRepository {
                             Type type = new TypeToken<Map<String, Object>>(){}.getType();
                             quotaProgress = dbManager.getGson().fromJson(quotaJson, type);
                         }
-                        return Optional.of(new PlayerProfile(uuid, name, rank, elo, lastReset, quotaProgress));
+                        return Optional.of(new PlayerProfile(uuid, resolvedName, rank, elo, lastReset, quotaProgress));
                     }
                 }
             } catch (SQLException e) {

@@ -424,7 +424,18 @@ public class RushManager {
             if (profile != null) {
                 resolvedProfiles.add(profile);
             } else if (getProfileRepository() != null) {
-                CompletableFuture<Void> fut = getProfileRepository().loadProfile(uuid, "OfflinePlayer")
+                String fallbackName = null;
+                try {
+                    if (Bukkit.getServer() != null) {
+                        OfflinePlayer off = Bukkit.getOfflinePlayer(uuid);
+                        fallbackName = off.getName();
+                    }
+                } catch (Exception ignored) {}
+                if (fallbackName == null || fallbackName.isEmpty()) {
+                    fallbackName = "Joueur";
+                }
+
+                CompletableFuture<Void> fut = getProfileRepository().loadProfile(uuid, fallbackName)
                         .thenAccept(offlineProfileOpt -> {
                             offlineProfileOpt.ifPresent(offlineProfile -> {
                                 synchronized (resolvedProfiles) {
@@ -753,7 +764,23 @@ public class RushManager {
             int rank = rankings.getOrDefault(uuid, 99);
             double points = scores.getOrDefault(uuid, 0.0);
             int eloChange = eloChanges.getOrDefault(uuid, 0);
-            entries.add(new SummaryEntry(uuid, profile.getPlayerName(), rank, points, eloChange, profile.getRankLevel()));
+
+            String playerName = profile.getPlayerName();
+            if (playerName == null || playerName.isBlank() || playerName.equalsIgnoreCase("OfflinePlayer")) {
+                try {
+                    if (Bukkit.getServer() != null) {
+                        OfflinePlayer off = Bukkit.getOfflinePlayer(uuid);
+                        if (off.getName() != null && !off.getName().isBlank()) {
+                            playerName = off.getName();
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+            if (playerName == null || playerName.isBlank()) {
+                playerName = "Joueur";
+            }
+
+            entries.add(new SummaryEntry(uuid, playerName, rank, points, eloChange, profile.getRankLevel()));
         }
 
         entries.sort((e1, e2) -> Integer.compare(e2.eloChange, e1.eloChange));
