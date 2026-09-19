@@ -380,6 +380,12 @@ public class AdminCommandExecutor implements CommandExecutor {
         plugin.reloadConfig();
         plugin.reloadGuiConfig();
         plugin.getMessageManager().loadMessages();
+        if (plugin.getQuotaService() != null) {
+            plugin.getQuotaService().loadConfig(plugin.getConfig(), plugin.getLogger());
+        }
+        if (plugin.getRushManager() != null) {
+            plugin.getRushManager().loadConfig(plugin.getConfig());
+        }
         sender.sendMessage(plugin.getMessageManager().getMessageComponent("admin-reload-success", "<green>Configuration, GUIs et Langues de DanaRanks correctement rechargées !</green>"));
     }
 

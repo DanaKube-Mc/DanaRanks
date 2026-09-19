@@ -17,6 +17,15 @@ import app.danakube.danaranks.core.profile.ui.ProfileGUI;
 public class QuotaGUI {
     private final DanaRanks plugin;
 
+    public static class QuotaHolder extends MenuFactory.CustomHolder {
+    }
+
+    public static boolean isViewingQuota(Player player) {
+        if (player == null || player.getOpenInventory() == null) return false;
+        Inventory topInv = player.getOpenInventory().getTopInventory();
+        return topInv != null && topInv.getHolder() instanceof QuotaHolder;
+    }
+
     public QuotaGUI(DanaRanks plugin) {
         this.plugin = plugin;
     }
@@ -28,7 +37,7 @@ public class QuotaGUI {
         String title = config.getString("menus.quota.title", "<dark_gray>Vos Quotas Périodiques");
         int size = config.getInt("menus.quota.size", 27);
 
-        MenuFactory.CustomHolder holder = new MenuFactory.CustomHolder();
+        QuotaHolder holder = new QuotaHolder();
         Inventory inv = plugin.getMenuFactory().createInventory(title, size, holder);
 
         Optional<PlayerProfile> profileOpt = plugin.getProfileCache().getProfile(player.getUniqueId());

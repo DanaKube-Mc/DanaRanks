@@ -57,6 +57,13 @@ public class QuotaProgressTracker {
 
     @SuppressWarnings("unchecked")
     public void incrementProgress(PlayerProfile profile, QuotaConfig quotaConfig, String resource, double amount) {
+        if (quotaService != null && Bukkit.getServer() != null) {
+            Player onlinePlayer = Bukkit.getPlayer(profile.getUuid());
+            if (onlinePlayer != null) {
+                quotaService.checkAndProcessReset(onlinePlayer, profile, java.time.Instant.now());
+            }
+        }
+
         String normalized = resource.replace("-", "_");
 
         Map<String, ObjectiveConfig> active = getActiveObjectives(profile);

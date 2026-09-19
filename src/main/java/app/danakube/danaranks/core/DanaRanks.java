@@ -118,6 +118,7 @@ public final class DanaRanks extends JavaPlugin {
         QuotaProgressTracker progressTracker = new QuotaProgressTracker(eloService);
         quotaService = new QuotaService(eloService, progressTracker);
         quotaService.loadConfig(config, getLogger());
+        quotaService.startScheduler(this);
 
         trackerRegistry = new TrackerRegistry(this);
         trackerRegistry.registerTracker(new LumensGainedTracker(this));
@@ -189,7 +190,10 @@ public final class DanaRanks extends JavaPlugin {
         if (profileCache != null) {
             profileCache.clear();
         }
-        quotaService = null;
+        if (quotaService != null) {
+            quotaService.stopScheduler();
+            quotaService = null;
+        }
         rushManager = null;
         trackerRegistry = null;
         instance = null;

@@ -28,7 +28,7 @@ anti-abuse:
 # Configuration des resets globaux
 reset:
   # Heure du reset (de 0 à 23)
-  hour: 4
+  hour: 0
   # Date de référence globale pour le calcul des périodes (Format YYYY-MM-DD)
   # Le reset de chaque niveau sera calculé par rapport à cette date.
   reference-date: "2026-07-03"
