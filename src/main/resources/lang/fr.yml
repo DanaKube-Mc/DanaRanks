@@ -198,6 +198,15 @@ resources:
   lumens_gained: "Lumens Gagnés"
   lumens_spent: "Lumens Dépensés"
   tool_xp: "XP Outils"
+  blocks_broken: "Blocs Cassés"
+  blocks_placed: "Blocs Posés"
+  mobs_killed: "Créatures Vaincues"
+  fish_caught: "Poissons Pêchés"
+  items_crafted: "Objets Fabriqués"
+  villager_trades: "Échanges Commerciaux"
+  distance_traveled: "Distance Parcourue"
+  crops_harvested: "Cultures Récoltées"
+  items_smelted: "Objets Cuits"
 
 
 history-description:

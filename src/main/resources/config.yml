@@ -112,6 +112,15 @@ rush:
     - "tool-xp"
     - "vanilla-xp-gained"
     - "vanilla-xp-spent"
+    - "blocks-broken"
+    - "blocks-placed"
+    - "mobs-killed"
+    - "fish-caught"
+    - "items-crafted"
+    - "villager-trades"
+    - "distance-traveled"
+    - "crops-harvested"
+    - "items-smelted"
 
   # Configuration visuelle des Boss Bars (Adventure)
   # Couleurs valides : PINK, BLUE, RED, GREEN, YELLOW, PURPLE, WHITE
@@ -310,3 +319,39 @@ resources:
     name: "XP Métier Traqueur"
     material: "FISHING_ROD"
     target: 500
+  blocks-broken:
+    name: "Blocs Minés"
+    material: "DIAMOND_PICKAXE"
+    target: 250
+  blocks-placed:
+    name: "Blocs Posés"
+    material: "BRICKS"
+    target: 200
+  mobs-killed:
+    name: "Créatures Vaincues"
+    material: "IRON_SWORD"
+    target: 50
+  fish-caught:
+    name: "Poissons Pêchés"
+    material: "FISHING_ROD"
+    target: 25
+  items-crafted:
+    name: "Objets Fabriqués"
+    material: "CRAFTING_TABLE"
+    target: 100
+  villager-trades:
+    name: "Échanges Commerciaux"
+    material: "EMERALD"
+    target: 15
+  distance-traveled:
+    name: "Distance Parcourue"
+    material: "LEATHER_BOOTS"
+    target: 1000
+  crops-harvested:
+    name: "Cultures Récoltées"
+    material: "WHEAT"
+    target: 60
+  items-smelted:
+    name: "Objets Cuits"
+    material: "FURNACE"
+    target: 80
