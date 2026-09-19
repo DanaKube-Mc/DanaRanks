@@ -99,6 +99,9 @@ rush:
   # URL du webhook Discord pour les annonces de Rush
   discord-webhook-url: ""
 
+  # Bonus ELO offert par la console à chaque joueur participant (ayant un score > 0)
+  console-elo-per-player: 5
+
   # Liste des ressources éligibles pour le tirage au sort quotidien
   eligible-resources:
     - "lumens-gained"

@@ -89,8 +89,17 @@ public class RushManager {
     private int preAnnounceMinutes = 30;
     private List<String> eligibleResources = new ArrayList<>();
     private String discordWebhookUrl = "";
+    private int consoleEloPerPlayer = 5;
 
     private final Map<String, RankSetting> rankSettings = new HashMap<>();
+
+    public int getConsoleEloPerPlayer() {
+        return consoleEloPerPlayer;
+    }
+
+    public void setConsoleEloPerPlayer(int consoleEloPerPlayer) {
+        this.consoleEloPerPlayer = consoleEloPerPlayer;
+    }
 
     public static class RankSetting {
         public double eloFactor;
@@ -119,6 +128,7 @@ public class RushManager {
         this.preAnnounceMinutes = config.getInt("rush.pre-announce-minutes", 30);
         this.eligibleResources = config.getStringList("rush.eligible-resources");
         this.discordWebhookUrl = config.getString("rush.discord-webhook-url", "");
+        this.consoleEloPerPlayer = config.getInt("rush.console-elo-per-player", 5);
 
         String[] levels = {"fer", "bronze", "argent", "or", "platine"};
         for (String level : levels) {
@@ -530,6 +540,17 @@ public class RushManager {
         }
 
         RushEloCalculator.calculateOrphanEloChanges(orphans, orphanPercentageScores, eloChanges, calculatorSettings);
+
+        // Application du bonus de participation offert par la console (si score > 0)
+        if (consoleEloPerPlayer > 0) {
+            for (PlayerProfile p : profiles) {
+                double score = scores.getOrDefault(p.getUuid(), 0.0);
+                if (score > 0.0) {
+                    int currentChange = eloChanges.getOrDefault(p.getUuid(), 0);
+                    eloChanges.put(p.getUuid(), currentChange + consoleEloPerPlayer);
+                }
+            }
+        }
 
         try {
             if (Bukkit.getServer() != null && Bukkit.getPluginManager() != null) {

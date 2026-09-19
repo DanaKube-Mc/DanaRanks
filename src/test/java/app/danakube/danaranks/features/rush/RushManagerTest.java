@@ -38,6 +38,7 @@ public class RushManagerTest {
         config.set("rush.eligible-resources", Arrays.asList(
                 "lumens-gained", "lumens-spent", "job-xp", "tool-xp", "vanilla-xp-gained", "vanilla-xp-spent"
         ));
+        config.set("rush.console-elo-per-player", 0);
         
         config.set("rush.rank-settings.fer.elo-factor", 50.0);
         config.set("rush.rank-settings.fer.gain-multiplier", 1.5);
@@ -528,5 +529,81 @@ public class RushManagerTest {
 
         // Assert
         assertEquals(100.0, rushManager.getPlayerScore(p1));
+    }
+
+    @Test
+    public void testConsoleEloParticipationBonus() throws Exception {
+        rushManager.setConsoleEloPerPlayer(5);
+
+        LocalDateTime time0800 = LocalDateTime.of(2026, 7, 3, 8, 0);
+        rushManager.setupDaily(time0800);
+
+        LocalDateTime start = rushManager.getStartTime();
+        Instant startInstant = start.atZone(ZoneId.systemDefault()).toInstant();
+        int duration = rushManager.getDurationMinutes();
+        Instant endInstant = startInstant.plusSeconds(duration * 60);
+
+        UUID p1 = UUID.randomUUID();
+        UUID p2 = UUID.randomUUID();
+        UUID pAfk = UUID.randomUUID();
+
+        // 2 joueurs Bronze (rank 15) à 50 ELO
+        PlayerProfile prof1 = PlayerProfileBuilder.aProfile().uuid(p1).name("P1").rank(15).elo(50).lastReset(startInstant).build();
+        PlayerProfile prof2 = PlayerProfileBuilder.aProfile().uuid(p2).name("P2").rank(15).elo(50).lastReset(startInstant).build();
+        // 1 joueur AFK avec score 0
+        PlayerProfile profAfk = PlayerProfileBuilder.aProfile().uuid(pAfk).name("AFK").rank(15).elo(50).lastReset(startInstant).build();
+
+        Map<UUID, PlayerProfile> cache = new HashMap<>();
+        cache.put(p1, prof1);
+        cache.put(p2, prof2);
+        cache.put(pAfk, profAfk);
+        rushManager.setProfileCacheOverride(cache);
+
+        rushManager.registerPlayer(p1, startInstant);
+        rushManager.registerPlayer(p2, startInstant);
+        rushManager.registerPlayer(pAfk, startInstant);
+
+        String res = rushManager.getDailyResource();
+        rushManager.handleResourceGain(p1, res, 100, startInstant.plusSeconds(5));
+        rushManager.handleResourceGain(p2, res, 50, startInstant.plusSeconds(5));
+        // pAfk garde score 0
+
+        rushManager.endRush(endInstant).join();
+
+        // Le gagnant doit avoir reçu au moins 5 ELO de plus que sans bonus
+        assertTrue(prof1.getElo() > 55);
+        // Le perdant a sa perte allégée grâce aux 5 ELO de participation
+        assertTrue(prof2.getElo() >= 45);
+        // Le joueur AFK (score 0) ne reçoit aucun ELO de participation
+        assertEquals(50, profAfk.getElo());
+    }
+
+    @Test
+    public void testSoloParticipantReceivesConsoleElo() throws Exception {
+        rushManager.setConsoleEloPerPlayer(5);
+
+        LocalDateTime time0800 = LocalDateTime.of(2026, 7, 3, 8, 0);
+        rushManager.setupDaily(time0800);
+
+        LocalDateTime start = rushManager.getStartTime();
+        Instant startInstant = start.atZone(ZoneId.systemDefault()).toInstant();
+        int duration = rushManager.getDurationMinutes();
+        Instant endInstant = startInstant.plusSeconds(duration * 60);
+
+        UUID soloUuid = UUID.randomUUID();
+        PlayerProfile soloProf = PlayerProfileBuilder.aProfile().uuid(soloUuid).name("Solo").rank(15).elo(50).lastReset(startInstant).build();
+
+        Map<UUID, PlayerProfile> cache = new HashMap<>();
+        cache.put(soloUuid, soloProf);
+        rushManager.setProfileCacheOverride(cache);
+
+        rushManager.registerPlayer(soloUuid, startInstant);
+
+        String res = rushManager.getDailyResource();
+        rushManager.handleResourceGain(soloUuid, res, 500, startInstant.plusSeconds(5));
+        rushManager.endRush(endInstant).join();
+
+        // Solo avec score > 0 reçoit +5 ELO de la console
+        assertEquals(55, soloProf.getElo());
     }
 }
