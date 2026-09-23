@@ -14,12 +14,21 @@ import app.danakube.danaranks.features.rush.RushCommand;
 import app.danakube.danaranks.hooks.LuckPermsHookImpl;
 import app.danakube.danaranks.hooks.PermissionHook;
 import app.danakube.danaranks.ui.MessageManager;
+import app.danakube.danaranks.tracker.BlockBreakTracker;
+import app.danakube.danaranks.tracker.BlockPlaceTracker;
+import app.danakube.danaranks.tracker.CropsHarvestedTracker;
+import app.danakube.danaranks.tracker.DistanceTraveledTracker;
+import app.danakube.danaranks.tracker.FishCaughtTracker;
+import app.danakube.danaranks.tracker.ItemsCraftedTracker;
+import app.danakube.danaranks.tracker.ItemsSmeltedTracker;
 import app.danakube.danaranks.tracker.JobXpTracker;
 import app.danakube.danaranks.tracker.LumensGainedTracker;
 import app.danakube.danaranks.tracker.LumensSpentTracker;
+import app.danakube.danaranks.tracker.MobsKilledTracker;
 import app.danakube.danaranks.tracker.ToolXpTracker;
 import app.danakube.danaranks.tracker.TrackerRegistry;
 import app.danakube.danaranks.tracker.VanillaXpTracker;
+import app.danakube.danaranks.tracker.VillagerTradesTracker;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -118,6 +127,7 @@ public final class DanaRanks extends JavaPlugin {
         QuotaProgressTracker progressTracker = new QuotaProgressTracker(eloService);
         quotaService = new QuotaService(eloService, progressTracker);
         quotaService.loadConfig(config, getLogger());
+        quotaService.startScheduler(this);
 
         trackerRegistry = new TrackerRegistry(this);
         trackerRegistry.registerTracker(new LumensGainedTracker(this));
@@ -126,6 +136,15 @@ public final class DanaRanks extends JavaPlugin {
         trackerRegistry.registerTracker(new ToolXpTracker(this));
         trackerRegistry.registerTracker(new VanillaXpTracker(this, "gained"));
         trackerRegistry.registerTracker(new VanillaXpTracker(this, "spent"));
+        trackerRegistry.registerTracker(new BlockBreakTracker(this));
+        trackerRegistry.registerTracker(new BlockPlaceTracker(this));
+        trackerRegistry.registerTracker(new MobsKilledTracker(this));
+        trackerRegistry.registerTracker(new FishCaughtTracker(this));
+        trackerRegistry.registerTracker(new ItemsCraftedTracker(this));
+        trackerRegistry.registerTracker(new VillagerTradesTracker(this));
+        trackerRegistry.registerTracker(new DistanceTraveledTracker(this));
+        trackerRegistry.registerTracker(new CropsHarvestedTracker(this));
+        trackerRegistry.registerTracker(new ItemsSmeltedTracker(this));
 
         getServer().getPluginManager().registerEvents(new QuotaListener(this), this);
 
@@ -189,7 +208,10 @@ public final class DanaRanks extends JavaPlugin {
         if (profileCache != null) {
             profileCache.clear();
         }
-        quotaService = null;
+        if (quotaService != null) {
+            quotaService.stopScheduler();
+            quotaService = null;
+        }
         rushManager = null;
         trackerRegistry = null;
         instance = null;

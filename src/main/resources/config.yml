@@ -28,7 +28,7 @@ anti-abuse:
 # Configuration des resets globaux
 reset:
   # Heure du reset (de 0 à 23)
-  hour: 4
+  hour: 0
   # Date de référence globale pour le calcul des périodes (Format YYYY-MM-DD)
   # Le reset de chaque niveau sera calculé par rapport à cette date.
   reference-date: "2026-07-03"
@@ -80,15 +80,35 @@ quotas-settings:
 
 # Configuration du Rush Quotidien
 rush:
-  # Heure de la planification journalière (tirage au sort de la ressource et des horaires)
+  # Heure de la planification journalière (tirage au sort des ressources et horaires des sessions)
   daily-setup-hour: 8
   
-  # Plage horaire dans laquelle le Rush peut démarrer (Heures de 0 à 23)
+  # Sessions de Rush quotidiennes configurables
+  # Chaque session tire au sort une ressource distincte, une heure de début et une durée
+  sessions:
+    matin:
+      name: "Matin"
+      start-window:
+        min-hour: 10
+        max-hour: 15
+      duration-range:
+        min-minutes: 20
+        max-minutes: 40
+    soir:
+      name: "Soir"
+      start-window:
+        min-hour: 17
+        max-hour: 22
+      duration-range:
+        min-minutes: 20
+        max-minutes: 40
+
+  # Plage horaire par défaut (fallback si rush.sessions n'est pas défini)
   start-window:
     min-hour: 12
     max-hour: 22
 
-  # Plage de durée de l'événement (en minutes)
+  # Plage de durée par défaut (fallback si rush.sessions n'est pas défini)
   duration-range:
     min-minutes: 20
     max-minutes: 60
@@ -98,6 +118,9 @@ rush:
 
   # URL du webhook Discord pour les annonces de Rush
   discord-webhook-url: ""
+
+  # Bonus ELO offert par la console à chaque joueur participant (ayant un score > 0)
+  console-elo-per-player: 5
 
   # Liste des ressources éligibles pour le tirage au sort quotidien
   eligible-resources:
@@ -112,6 +135,15 @@ rush:
     - "tool-xp"
     - "vanilla-xp-gained"
     - "vanilla-xp-spent"
+    - "blocks-broken"
+    - "blocks-placed"
+    - "mobs-killed"
+    - "fish-caught"
+    - "items-crafted"
+    - "villager-trades"
+    - "distance-traveled"
+    - "crops-harvested"
+    - "items-smelted"
 
   # Configuration visuelle des Boss Bars (Adventure)
   # Couleurs valides : PINK, BLUE, RED, GREEN, YELLOW, PURPLE, WHITE
@@ -310,3 +342,39 @@ resources:
     name: "XP Métier Traqueur"
     material: "FISHING_ROD"
     target: 500
+  blocks-broken:
+    name: "Blocs Minés"
+    material: "DIAMOND_PICKAXE"
+    target: 250
+  blocks-placed:
+    name: "Blocs Posés"
+    material: "BRICKS"
+    target: 200
+  mobs-killed:
+    name: "Créatures Vaincues"
+    material: "IRON_SWORD"
+    target: 50
+  fish-caught:
+    name: "Poissons Pêchés"
+    material: "FISHING_ROD"
+    target: 25
+  items-crafted:
+    name: "Objets Fabriqués"
+    material: "CRAFTING_TABLE"
+    target: 100
+  villager-trades:
+    name: "Échanges Commerciaux"
+    material: "EMERALD"
+    target: 15
+  distance-traveled:
+    name: "Distance Parcourue"
+    material: "LEATHER_BOOTS"
+    target: 1000
+  crops-harvested:
+    name: "Cultures Récoltées"
+    material: "WHEAT"
+    target: 60
+  items-smelted:
+    name: "Objets Cuits"
+    material: "FURNACE"
+    target: 80

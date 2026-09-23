@@ -38,6 +38,7 @@ public class RushManagerTest {
         config.set("rush.eligible-resources", Arrays.asList(
                 "lumens-gained", "lumens-spent", "job-xp", "tool-xp", "vanilla-xp-gained", "vanilla-xp-spent"
         ));
+        config.set("rush.console-elo-per-player", 0);
         
         config.set("rush.rank-settings.fer.elo-factor", 50.0);
         config.set("rush.rank-settings.fer.gain-multiplier", 1.5);
@@ -528,5 +529,203 @@ public class RushManagerTest {
 
         // Assert
         assertEquals(100.0, rushManager.getPlayerScore(p1));
+    }
+
+    @Test
+    public void testConsoleEloParticipationBonus() throws Exception {
+        rushManager.setConsoleEloPerPlayer(5);
+
+        LocalDateTime time0800 = LocalDateTime.of(2026, 7, 3, 8, 0);
+        rushManager.setupDaily(time0800);
+
+        LocalDateTime start = rushManager.getStartTime();
+        Instant startInstant = start.atZone(ZoneId.systemDefault()).toInstant();
+        int duration = rushManager.getDurationMinutes();
+        Instant endInstant = startInstant.plusSeconds(duration * 60);
+
+        UUID p1 = UUID.randomUUID();
+        UUID p2 = UUID.randomUUID();
+        UUID pAfk = UUID.randomUUID();
+
+        // 2 joueurs Bronze (rank 15) à 50 ELO
+        PlayerProfile prof1 = PlayerProfileBuilder.aProfile().uuid(p1).name("P1").rank(15).elo(50).lastReset(startInstant).build();
+        PlayerProfile prof2 = PlayerProfileBuilder.aProfile().uuid(p2).name("P2").rank(15).elo(50).lastReset(startInstant).build();
+        // 1 joueur AFK avec score 0
+        PlayerProfile profAfk = PlayerProfileBuilder.aProfile().uuid(pAfk).name("AFK").rank(15).elo(50).lastReset(startInstant).build();
+
+        Map<UUID, PlayerProfile> cache = new HashMap<>();
+        cache.put(p1, prof1);
+        cache.put(p2, prof2);
+        cache.put(pAfk, profAfk);
+        rushManager.setProfileCacheOverride(cache);
+
+        rushManager.registerPlayer(p1, startInstant);
+        rushManager.registerPlayer(p2, startInstant);
+        rushManager.registerPlayer(pAfk, startInstant);
+
+        String res = rushManager.getDailyResource();
+        rushManager.handleResourceGain(p1, res, 100, startInstant.plusSeconds(5));
+        rushManager.handleResourceGain(p2, res, 50, startInstant.plusSeconds(5));
+        // pAfk garde score 0
+
+        rushManager.endRush(endInstant).join();
+
+        // Le gagnant doit avoir reçu au moins 5 ELO de plus que sans bonus
+        assertTrue(prof1.getElo() > 55);
+        // Le perdant a sa perte allégée grâce aux 5 ELO de participation
+        assertTrue(prof2.getElo() >= 45);
+        // Le joueur AFK (score 0) ne reçoit aucun ELO de participation
+        assertEquals(50, profAfk.getElo());
+    }
+
+    @Test
+    public void testSoloParticipantReceivesConsoleElo() throws Exception {
+        rushManager.setConsoleEloPerPlayer(5);
+
+        LocalDateTime time0800 = LocalDateTime.of(2026, 7, 3, 8, 0);
+        rushManager.setupDaily(time0800);
+
+        LocalDateTime start = rushManager.getStartTime();
+        Instant startInstant = start.atZone(ZoneId.systemDefault()).toInstant();
+        int duration = rushManager.getDurationMinutes();
+        Instant endInstant = startInstant.plusSeconds(duration * 60);
+
+        UUID soloUuid = UUID.randomUUID();
+        PlayerProfile soloProf = PlayerProfileBuilder.aProfile().uuid(soloUuid).name("Solo").rank(15).elo(50).lastReset(startInstant).build();
+
+        Map<UUID, PlayerProfile> cache = new HashMap<>();
+        cache.put(soloUuid, soloProf);
+        rushManager.setProfileCacheOverride(cache);
+
+        rushManager.registerPlayer(soloUuid, startInstant);
+
+        String res = rushManager.getDailyResource();
+        rushManager.handleResourceGain(soloUuid, res, 500, startInstant.plusSeconds(5));
+        rushManager.endRush(endInstant).join();
+
+        // Solo avec score > 0 reçoit +5 ELO de la console
+        assertEquals(55, soloProf.getElo());
+    }
+
+    @Test
+    public void testMultiSessionSetupAndPlanning() {
+        YamlConfiguration multiConfig = new YamlConfiguration();
+        multiConfig.set("rush.daily-setup-hour", 8);
+        multiConfig.set("rush.sessions.matin.name", "Matin");
+        multiConfig.set("rush.sessions.matin.start-window.min-hour", 10);
+        multiConfig.set("rush.sessions.matin.start-window.max-hour", 15);
+        multiConfig.set("rush.sessions.matin.duration-range.min-minutes", 20);
+        multiConfig.set("rush.sessions.matin.duration-range.max-minutes", 40);
+
+        multiConfig.set("rush.sessions.soir.name", "Soir");
+        multiConfig.set("rush.sessions.soir.start-window.min-hour", 17);
+        multiConfig.set("rush.sessions.soir.start-window.max-hour", 22);
+        multiConfig.set("rush.sessions.soir.duration-range.min-minutes", 20);
+        multiConfig.set("rush.sessions.soir.duration-range.max-minutes", 40);
+
+        multiConfig.set("rush.eligible-resources", Arrays.asList("lumens-gained", "lumens-spent", "job-xp", "tool-xp"));
+
+        RushManager multiRush = new RushManager(null);
+        multiRush.loadConfig(multiConfig);
+
+        assertEquals(2, multiRush.getSessionConfigs().size());
+
+        LocalDateTime time0800 = LocalDateTime.of(2026, 7, 3, 8, 0);
+        multiRush.setupDaily(time0800);
+
+        RushEventState state = multiRush.getState();
+        assertTrue(state.isDailyPlanned());
+        assertEquals(2, state.getDailyRushes().size());
+
+        PlannedRush session1 = state.getDailyRushes().get(0);
+        PlannedRush session2 = state.getDailyRushes().get(1);
+
+        assertEquals("Matin", session1.getSessionName());
+        assertTrue(session1.getStartTime().getHour() >= 10 && session1.getStartTime().getHour() <= 15);
+        assertTrue(session1.getDurationMinutes() >= 20 && session1.getDurationMinutes() <= 40);
+
+        assertEquals("Soir", session2.getSessionName());
+        assertTrue(session2.getStartTime().getHour() >= 17 && session2.getStartTime().getHour() <= 22);
+        assertTrue(session2.getDurationMinutes() >= 20 && session2.getDurationMinutes() <= 40);
+
+        assertNotEquals(session1.getResource(), session2.getResource());
+        assertEquals(session1, state.getCurrentRush());
+    }
+
+    @Test
+    public void testMultiSessionTransitionOnEndRush() throws Exception {
+        YamlConfiguration multiConfig = new YamlConfiguration();
+        multiConfig.set("rush.daily-setup-hour", 8);
+        multiConfig.set("rush.sessions.matin.name", "Matin");
+        multiConfig.set("rush.sessions.matin.start-window.min-hour", 10);
+        multiConfig.set("rush.sessions.matin.start-window.max-hour", 15);
+        multiConfig.set("rush.sessions.matin.duration-range.min-minutes", 30);
+        multiConfig.set("rush.sessions.matin.duration-range.max-minutes", 30);
+
+        multiConfig.set("rush.sessions.soir.name", "Soir");
+        multiConfig.set("rush.sessions.soir.start-window.min-hour", 18);
+        multiConfig.set("rush.sessions.soir.start-window.max-hour", 20);
+        multiConfig.set("rush.sessions.soir.duration-range.min-minutes", 30);
+        multiConfig.set("rush.sessions.soir.duration-range.max-minutes", 30);
+
+        multiConfig.set("rush.eligible-resources", Arrays.asList("lumens-gained", "lumens-spent"));
+        multiConfig.set("rush.console-elo-per-player", 5);
+
+        RushManager multiRush = new RushManager(null);
+        multiRush.loadConfig(multiConfig);
+        multiRush.setDatabaseManagerOverride(dbManager);
+
+        Map<UUID, PlayerProfile> cache = new HashMap<>();
+        multiRush.setProfileCacheOverride(cache);
+
+        LocalDateTime time0800 = LocalDateTime.of(2026, 7, 3, 8, 0);
+        multiRush.setupDaily(time0800);
+
+        RushEventState state = multiRush.getState();
+        assertEquals("Matin", state.getSessionName());
+
+        // Session 1 : Matin
+        PlannedRush session1 = state.getCurrentRush();
+        Instant s1Start = session1.getStartTime().atZone(ZoneId.systemDefault()).toInstant();
+        Instant s1End = s1Start.plusSeconds(session1.getDurationMinutes() * 60L);
+
+        UUID p1 = UUID.randomUUID();
+        PlayerProfile prof1 = PlayerProfileBuilder.aProfile().uuid(p1).name("P1").rank(15).elo(50).lastReset(s1Start).build();
+        cache.put(p1, prof1);
+
+        multiRush.registerPlayer(p1, s1Start);
+        multiRush.handleResourceGain(p1, session1.getResource(), 500, s1Start.plusSeconds(5));
+
+        // Terminer Session 1
+        multiRush.endRush(s1End).join();
+
+        assertEquals(55, prof1.getElo()); // 50 + 5 (console solo)
+        assertTrue(session1.isCompleted());
+        assertEquals(0, multiRush.getRegisteredPlayersCount());
+
+        // Doit avoir basculé sur Session 2
+        assertTrue(state.isDailyPlanned());
+        assertEquals("Soir", state.getSessionName());
+        PlannedRush session2 = state.getCurrentRush();
+        assertFalse(session2.isCompleted());
+
+        // Session 2 : Soir
+        Instant s2Start = session2.getStartTime().atZone(ZoneId.systemDefault()).toInstant();
+        Instant s2End = s2Start.plusSeconds(session2.getDurationMinutes() * 60L);
+
+        UUID p2 = UUID.randomUUID();
+        PlayerProfile prof2 = PlayerProfileBuilder.aProfile().uuid(p2).name("P2").rank(15).elo(50).lastReset(s2Start).build();
+        cache.put(p2, prof2);
+
+        multiRush.registerPlayer(p2, s2Start);
+        multiRush.handleResourceGain(p2, session2.getResource(), 300, s2Start.plusSeconds(5));
+
+        // Terminer Session 2
+        multiRush.endRush(s2End).join();
+
+        assertEquals(55, prof2.getElo());
+        assertTrue(session2.isCompleted());
+        assertFalse(state.isDailyPlanned());
+        assertNull(state.getNextUncompletedRush());
     }
 }

@@ -159,6 +159,13 @@ messages:
     - "<#fdba5e><b>¤ Quotas - %rank%"
     - ""
     - <#d4d9d8>%resource% : <#ffeea2>%progress% / %target% <#d4d9d8>(%milestone%%)"
+  quota-reset-online:
+    - ""
+    - "<#fdba5e><b>¤ Quotas - Fin de Période</b>"
+    - "<#d4d9d8>Vos objectifs ont été réinitialisés pour la nouvelle période !"
+    - "<#d4d9d8>Variation d'ELO : <%color%>%sign%%change% ELO</%color%>"
+    - "<#ffeea2>/quota<#d4d9d8> pour découvrir vos nouveaux objectifs !"
+    - ""
 
   # Rush info
   rush-info-no-active:
@@ -191,6 +198,15 @@ resources:
   lumens_gained: "Lumens Gagnés"
   lumens_spent: "Lumens Dépensés"
   tool_xp: "XP Outils"
+  blocks_broken: "Blocs Cassés"
+  blocks_placed: "Blocs Posés"
+  mobs_killed: "Créatures Vaincues"
+  fish_caught: "Poissons Pêchés"
+  items_crafted: "Objets Fabriqués"
+  villager_trades: "Échanges Commerciaux"
+  distance_traveled: "Distance Parcourue"
+  crops_harvested: "Cultures Récoltées"
+  items_smelted: "Objets Cuits"
 
 
 history-description:

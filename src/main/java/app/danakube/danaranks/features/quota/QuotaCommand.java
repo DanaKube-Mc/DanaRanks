@@ -21,6 +21,11 @@ public class QuotaCommand implements CommandExecutor {
             sender.sendMessage(plugin.getMessageManager().getMessageComponent("player-only", "<red>Seuls les joueurs peuvent exécuter cette commande.</red>"));
             return true;
         }
+        if (plugin.getProfileCache() != null && plugin.getQuotaService() != null) {
+            plugin.getProfileCache().getProfile(player.getUniqueId()).ifPresent(profile -> {
+                plugin.getQuotaService().checkAndProcessReset(player, profile, java.time.Instant.now());
+            });
+        }
         new QuotaGUI(plugin).open(player);
         return true;
     }

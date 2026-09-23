@@ -263,4 +263,66 @@ public class QuotaServiceTest {
         assertEquals(50, profile.getRankLevel());
         assertEquals(0, profile.getElo());
     }
+
+    @Test
+    public void testCheckAndProcessResetTriggersWhenCycleExpired() {
+        EloService eloService = new EloService(stubPerms, stubHistory);
+        QuotaProgressTracker progressTracker = new QuotaProgressTracker(eloService);
+        QuotaService qm = new QuotaService(eloService, progressTracker);
+
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("reset.reference-date", "2026-07-03");
+        config.set("reset.hour", 0);
+        config.set("quotas-settings.ranks.1-50.base-elo", 10);
+        config.set("quotas-settings.ranks.1-50.max-surplus-elo", 20);
+        config.set("quotas-settings.ranks.1-50.fail-penalty", 0);
+        config.set("quotas-settings.ranks.1-50.max-objectives", 1);
+        config.set("quotas-settings.base-rank-1.objectives.lumens-gained.target", 1000);
+        qm.loadConfig(config, null);
+
+        PlayerProfile profile = PlayerProfileBuilder.aProfile().name("OnlinePlayer").rank(1).elo(0).build();
+        Instant ref = LocalDateTime.of(2026, 7, 3, 0, 0)
+                .atZone(ZoneId.systemDefault())
+                .toInstant();
+        profile.setLastReset(ref);
+        progressTracker.resetQuotaProgress(profile, 1);
+
+        // Instant le jour suivant à 00:01
+        Instant now = ref.plusSeconds(86400 + 60);
+
+        boolean resetOccurred = qm.checkAndProcessReset(null, profile, now);
+        assertTrue(resetOccurred);
+        assertEquals(ref.plusSeconds(86400), profile.getLastReset());
+    }
+
+    @Test
+    public void testCheckAndProcessResetIgnoredWhenSameCycle() {
+        EloService eloService = new EloService(stubPerms, stubHistory);
+        QuotaProgressTracker progressTracker = new QuotaProgressTracker(eloService);
+        QuotaService qm = new QuotaService(eloService, progressTracker);
+
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("reset.reference-date", "2026-07-03");
+        config.set("reset.hour", 0);
+        config.set("quotas-settings.ranks.1-50.base-elo", 10);
+        config.set("quotas-settings.ranks.1-50.max-surplus-elo", 20);
+        config.set("quotas-settings.ranks.1-50.fail-penalty", 0);
+        config.set("quotas-settings.ranks.1-50.max-objectives", 1);
+        config.set("quotas-settings.base-rank-1.objectives.lumens-gained.target", 1000);
+        qm.loadConfig(config, null);
+
+        PlayerProfile profile = PlayerProfileBuilder.aProfile().name("OnlinePlayer2").rank(1).elo(0).build();
+        Instant ref = LocalDateTime.of(2026, 7, 3, 0, 0)
+                .atZone(ZoneId.systemDefault())
+                .toInstant();
+        profile.setLastReset(ref);
+        progressTracker.resetQuotaProgress(profile, 1);
+
+        // Instant le même jour à 14h30
+        Instant now = ref.plusSeconds(14 * 3600 + 1800);
+
+        boolean resetOccurred = qm.checkAndProcessReset(null, profile, now);
+        assertFalse(resetOccurred);
+        assertEquals(ref, profile.getLastReset());
+    }
 }

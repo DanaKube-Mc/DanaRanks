@@ -89,8 +89,29 @@ public class RushManager {
     private int preAnnounceMinutes = 30;
     private List<String> eligibleResources = new ArrayList<>();
     private String discordWebhookUrl = "";
+    private int consoleEloPerPlayer = 5;
+    private final List<RushSessionConfig> sessionConfigs = new ArrayList<>();
 
     private final Map<String, RankSetting> rankSettings = new HashMap<>();
+
+    public int getConsoleEloPerPlayer() {
+        return consoleEloPerPlayer;
+    }
+
+    public void setConsoleEloPerPlayer(int consoleEloPerPlayer) {
+        this.consoleEloPerPlayer = consoleEloPerPlayer;
+    }
+
+    public List<RushSessionConfig> getSessionConfigs() {
+        return Collections.unmodifiableList(sessionConfigs);
+    }
+
+    public void setSessionConfigs(List<RushSessionConfig> configs) {
+        this.sessionConfigs.clear();
+        if (configs != null) {
+            this.sessionConfigs.addAll(configs);
+        }
+    }
 
     public static class RankSetting {
         public double eloFactor;
@@ -119,6 +140,25 @@ public class RushManager {
         this.preAnnounceMinutes = config.getInt("rush.pre-announce-minutes", 30);
         this.eligibleResources = config.getStringList("rush.eligible-resources");
         this.discordWebhookUrl = config.getString("rush.discord-webhook-url", "");
+        this.consoleEloPerPlayer = config.getInt("rush.console-elo-per-player", 5);
+
+        this.sessionConfigs.clear();
+        if (config.isConfigurationSection("rush.sessions")) {
+            var sec = config.getConfigurationSection("rush.sessions");
+            if (sec != null) {
+                for (String key : sec.getKeys(false)) {
+                    int minHour = sec.getInt(key + ".start-window.min-hour", sec.getInt(key + ".min-start-hour", 12));
+                    int maxHour = sec.getInt(key + ".start-window.max-hour", sec.getInt(key + ".max-start-hour", 22));
+                    int minDur = sec.getInt(key + ".duration-range.min-minutes", sec.getInt(key + ".min-duration-minutes", 20));
+                    int maxDur = sec.getInt(key + ".duration-range.max-minutes", sec.getInt(key + ".max-duration-minutes", 60));
+                    String name = sec.getString(key + ".name", key);
+                    this.sessionConfigs.add(new RushSessionConfig(name, minHour, maxHour, minDur, maxDur));
+                }
+            }
+        }
+        if (this.sessionConfigs.isEmpty()) {
+            this.sessionConfigs.add(new RushSessionConfig("Default", minStartHour, maxStartHour, minDurationMinutes, maxDurationMinutes));
+        }
 
         String[] levels = {"fer", "bronze", "argent", "or", "platine"};
         for (String level : levels) {
@@ -148,12 +188,16 @@ public class RushManager {
     }
 
     public void setupDaily(LocalDateTime now) {
-        RushScheduler.planNextRush(state, eligibleResources, minStartHour, maxStartHour, minDurationMinutes, maxDurationMinutes, now);
+        RushScheduler.planDailyRushes(state, eligibleResources, sessionConfigs, now);
         
-        logger.info("[Rush] Daily Rush setup completed. Resource: " + state.getDailyResource() + 
-                ", Start: " + state.getStartTime() + ", Duration: " + state.getDurationMinutes() + "m.");
-
-        announceRegistration();
+        if (state.getCurrentRush() != null) {
+            logger.info("[Rush] Daily Rush setup completed with " + state.getDailyRushes().size() + " session(s). Current session: " +
+                    state.getSessionName() + ", Resource: " + state.getDailyResource() + 
+                    ", Start: " + state.getStartTime() + ", Duration: " + state.getDurationMinutes() + "m.");
+            announceRegistration();
+        } else {
+            logger.warning("[Rush] Daily Rush setup resulted in no planned rush.");
+        }
     }
 
     private void announceRegistration() {
@@ -166,18 +210,20 @@ public class RushManager {
         }
         String durationStr = String.valueOf(state.getDurationMinutes());
         String resourceName = plugin.getResourceDisplayName(state.getDailyResource());
+        String sessionName = state.getSessionName() != null ? state.getSessionName() : "";
 
         Map<String, String> placeholders = Map.of(
                 "%resource%", resourceName,
                 "%time%", timeStr,
-                "%duration%", durationStr
+                "%duration%", durationStr,
+                "%session%", sessionName
         );
 
         Bukkit.broadcast(getMessageComponent("rush-planned-announcement",
-                "<blue>[Rush] Le Rush quotidien sur la ressource <gold>%resource%</gold> est planifié ! Tapez <yellow>/rush join</yellow> pour vous inscrire !</blue>",
+                "<blue>[Rush] Le Rush quotidien (%session%) sur la ressource <gold>%resource%</gold> est planifié ! Tapez <yellow>/rush join</yellow> pour vous inscrire !</blue>",
                 placeholders));
         sendDiscordWebhook(formatMessage("rush-discord-planned",
-                "[Rush] Le Rush sur la ressource %resource% est planifié pour aujourd'hui ! Les inscriptions sont ouvertes via /rush join !",
+                "[Rush] Le Rush (%session%) sur la ressource %resource% est planifié pour aujourd'hui ! Les inscriptions sont ouvertes via /rush join !",
                 placeholders));
     }
 
@@ -389,18 +435,21 @@ public class RushManager {
     }
 
     public CompletableFuture<Void> endRush(Instant now) {
-        logger.info("[Rush] Ending daily rush event.");
+        logger.info("[Rush] Ending daily rush event: " + (state.getSessionName() != null ? state.getSessionName() : "Current"));
         state.setRushActive(false);
-        state.setDailyPlanned(false);
         state.setRegistrationOpen(false);
+
+        if (state.getCurrentRush() != null) {
+            state.getCurrentRush().setCompleted(true);
+        }
 
         visualManager.hideAnnounceBar();
         visualManager.clearAllActiveBars();
 
         if (Bukkit.getServer() != null) {
             Bukkit.broadcast(getMessageComponent("admin-rush-ended",
-                    "<blue>[Rush] Le Rush d'aujourd'hui est terminé ! Calcul des ELO en cours...</blue>",
-                    java.util.Collections.emptyMap()));
+                    "<blue>[Rush] Le Rush d'aujourd'hui (%session%) est terminé ! Calcul des ELO en cours...</blue>",
+                    Map.of("%session%", state.getSessionName() != null ? state.getSessionName() : "")));
         }
 
         Map<UUID, Double> activeParticipants = new HashMap<>();
@@ -413,6 +462,7 @@ public class RushManager {
         if (activeParticipants.isEmpty()) {
             logger.info("[Rush] No participant reached a score > 0. Rush closed without ELO distribution.");
             state.getRegisteredScores().clear();
+            transitionToNextSessionOrClose();
             return CompletableFuture.completedFuture(null);
         }
 
@@ -531,6 +581,17 @@ public class RushManager {
 
         RushEloCalculator.calculateOrphanEloChanges(orphans, orphanPercentageScores, eloChanges, calculatorSettings);
 
+        // Application du bonus de participation offert par la console (si score > 0)
+        if (consoleEloPerPlayer > 0) {
+            for (PlayerProfile p : profiles) {
+                double score = scores.getOrDefault(p.getUuid(), 0.0);
+                if (score > 0.0) {
+                    int currentChange = eloChanges.getOrDefault(p.getUuid(), 0);
+                    eloChanges.put(p.getUuid(), currentChange + consoleEloPerPlayer);
+                }
+            }
+        }
+
         try {
             if (Bukkit.getServer() != null && Bukkit.getPluginManager() != null) {
                 Bukkit.getPluginManager().callEvent(new DanaRushEndEvent(state.getDailyResource(), scores, eloChanges));
@@ -586,7 +647,26 @@ public class RushManager {
         }
 
         state.getRegisteredScores().clear();
+        transitionToNextSessionOrClose();
         return CompletableFuture.allOf(dbFutures.toArray(new CompletableFuture[0]));
+    }
+
+    private void transitionToNextSessionOrClose() {
+        PlannedRush nextRush = state.getNextUncompletedRush();
+        if (nextRush != null) {
+            state.setCurrentRush(nextRush);
+            state.setDailyPlanned(true);
+            state.setRegistrationOpen(true);
+            state.setRushActive(false);
+            state.setDiscordAnnounced(false);
+            logger.info("[Rush] Next session queued: " + nextRush.getSessionName() + " (" + nextRush.getResource() + " at " + nextRush.getStartTime() + ").");
+            announceRegistration();
+        } else {
+            state.setDailyPlanned(false);
+            state.setRegistrationOpen(false);
+            state.setRushActive(false);
+            logger.info("[Rush] All daily rush sessions completed for today.");
+        }
     }
 
     public CompletableFuture<Void> checkOfflineSummary(PlayerProfile profile, Consumer<String> messageSender) {
@@ -622,11 +702,11 @@ public class RushManager {
         LocalDateTime now = LocalDateTime.now();
         Instant nowInstant = now.atZone(ZoneId.systemDefault()).toInstant();
 
+        PlannedRush forced = new PlannedRush("Forced", resource, now, durationMinutes);
+        state.setDailyRushes(List.of(forced));
+        state.setCurrentRush(forced);
         state.setDailyPlanned(true);
         state.setLastPlannedDate(now.toLocalDate());
-        state.setDailyResource(resource);
-        state.setDurationMinutes(durationMinutes);
-        state.setStartTime(now);
         state.setRushActive(true);
         scoreTracker.clear();
 
@@ -672,13 +752,14 @@ public class RushManager {
 
     public void forceScheduleRush(String resource, int durationMinutes, int delayMinutes) {
         LocalDateTime start = LocalDateTime.now().plusMinutes(delayMinutes);
+        PlannedRush forced = new PlannedRush("AdminScheduled", resource, start, durationMinutes);
+        state.setDailyRushes(List.of(forced));
+        state.setCurrentRush(forced);
         state.setDailyPlanned(true);
         state.setLastPlannedDate(start.toLocalDate());
-        state.setDailyResource(resource);
-        state.setDurationMinutes(durationMinutes);
-        state.setStartTime(start);
         state.setRushActive(false);
         state.setDiscordAnnounced(false);
+        state.setRegistrationOpen(true);
         scoreTracker.clear();
 
         visualManager.hideAnnounceBar();
@@ -823,10 +904,22 @@ public class RushManager {
             return;
         }
         sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-header", "<blue>--- Informations sur le Rush ---</blue>"));
+        if (state.getSessionName() != null && !state.getSessionName().isEmpty()) {
+            sender.sendMessage(MiniMessage.miniMessage().deserialize("<white>Session : <gold>" + state.getSessionName() + "</gold></white>"));
+        }
         sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-resource", "<white>Ressource : <green>%resource%</green></white>", Map.of("%resource%", plugin.getResourceDisplayName(state.getDailyResource()))));
         sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-duration", "<white>Durée : <yellow>%duration% minutes</yellow></white>", Map.of("%duration%", String.valueOf(state.getDurationMinutes()))));
         sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-status", "<white>Statut : <yellow>%status%</yellow></white>", Map.of("%status%", state.isRushActive() ? "En cours" : "Attente de démarrage")));
         sender.sendMessage(plugin.getMessageManager().getMessageComponent("rush-info-registered-count", "<white>Nombre d'inscrits : <yellow>%count%</yellow></white>", Map.of("%count%", String.valueOf(getRegisteredPlayersCount()))));
+
+        if (state.getDailyRushes().size() > 1) {
+            sender.sendMessage(MiniMessage.miniMessage().deserialize("<gray>Sessions d'aujourd'hui :</gray>"));
+            for (PlannedRush r : state.getDailyRushes()) {
+                String status = r.isCompleted() ? "<red>[Terminé]</red>" : (r == state.getCurrentRush() && state.isRushActive() ? "<green>[En cours]</green>" : "<yellow>[Planifié]</yellow>");
+                String timeStr = r.getStartTime().format(DateTimeFormatter.ofPattern("HH:mm"));
+                sender.sendMessage(MiniMessage.miniMessage().deserialize(" - <white>" + r.getSessionName() + "</white> (" + plugin.getResourceDisplayName(r.getResource()) + " à " + timeStr + ") " + status));
+            }
+        }
 
         if (getRegisteredPlayersCount() > 0) {
             Player pSender = (sender instanceof Player p) ? p : null;

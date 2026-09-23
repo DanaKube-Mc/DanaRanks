@@ -157,4 +157,42 @@ public class DatabaseManagerTest {
         // Cleanup
         dbManager.close();
     }
+
+    @Test
+    public void testDuplicateKeyInQuotaProgressRecovery() throws Exception {
+        // Arrange
+        DatabaseManager dbManager = new DatabaseManager("jdbc:sqlite::memory:");
+        ProfileRepository profileRepo = new ProfileRepository(dbManager);
+
+        UUID uuid = UUID.fromString("0750798d-debb-4b42-a332-363f3a2a9861");
+        String name = "Jupiitaris";
+
+        // Manually insert raw JSON with duplicate keys
+        String corruptedJson = "{\"announced_milestones\":{\"lumens_gained\":[50]},\"progress\":{\"lumens_gained\":100.0},\"announced_milestones\":{\"lumens_gained\":[50,100]}}";
+        try (java.sql.Connection conn = dbManager.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(
+                     "INSERT INTO " + dbManager.getTablePrefix() + "profiles (uuid, player_name, rank_level, elo, quota_progress) VALUES (?, ?, ?, ?, ?)")) {
+            ps.setString(1, uuid.toString());
+            ps.setString(2, name);
+            ps.setInt(3, 2);
+            ps.setInt(4, 30);
+            ps.setString(5, corruptedJson);
+            ps.executeUpdate();
+        }
+
+        // Act - Should not throw JsonSyntaxException: duplicate key
+        Optional<PlayerProfile> loadedOpt = profileRepo.loadProfile(uuid, name).get();
+
+        // Assert
+        assertTrue(loadedOpt.isPresent());
+        PlayerProfile loaded = loadedOpt.get();
+        assertEquals(name, loaded.getPlayerName());
+        assertEquals(2, loaded.getRankLevel());
+        assertEquals(30, loaded.getElo());
+        assertNotNull(loaded.getQuotaProgress());
+        assertTrue(loaded.getQuotaProgress().containsKey("announced_milestones"));
+
+        // Cleanup
+        dbManager.close();
+    }
 }
