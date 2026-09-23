@@ -140,7 +140,7 @@ public class QuotaGUI {
             double target = obj.target();
             double surplusMultiplier = plugin.getQuotaService().getQuotaConfig().surplusMultiplier();
 
-            // Calcul du pourcentage sur l'échelle 0% à 200%
+            // Calcul du pourcentage sur l'échelle 0% à 300% (100% base + 200% surplus)
             int percentage;
             if (progress <= target) {
                 percentage = (int) Math.min(100, Math.round((progress / target) * 100));
@@ -148,7 +148,7 @@ public class QuotaGUI {
                 double diff = progress - target;
                 double maxDiff = target * (surplusMultiplier - 1.0);
                 double fraction = maxDiff > 0 ? Math.min(1.0, diff / maxDiff) : 0;
-                percentage = 100 + (int) Math.round(fraction * 100);
+                percentage = 100 + (int) Math.round(fraction * 200);
             }
 
             String bar;
@@ -187,9 +187,9 @@ public class QuotaGUI {
                         bar = filledStr + emptyStr;
                     }
                 } else {
-                    // Phase 2 : Remplissage du surplus de 100% à 200% (surplus vs filled)
+                    // Phase 2 : Remplissage du surplus de 100% à 300% (surplus vs filled)
                     int surplusPercentage = percentage - 100;
-                    int filledSurplus = (int) Math.round((surplusPercentage / 100.0) * barLength);
+                    int filledSurplus = (int) Math.round((surplusPercentage / 200.0) * barLength);
                     filledSurplus = Math.max(0, Math.min(barLength, filledSurplus));
 
                     if (showPercentageInside) {

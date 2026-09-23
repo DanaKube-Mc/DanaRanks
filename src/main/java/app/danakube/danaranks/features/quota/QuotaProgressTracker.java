@@ -122,12 +122,13 @@ public class QuotaProgressTracker {
                                 progressData.put("announced_milestones", announcedMap);
                             }
 
-                            List<Integer> announcedList = (List<Integer>) announcedMap.computeIfAbsent(normalized, k -> new ArrayList<>());
+                            List<?> announcedList = (List<?>) announcedMap.computeIfAbsent(normalized, k -> new ArrayList<>());
 
                             for (int milestone : milestones) {
                                 double milestoneTarget = target * (milestone / 100.0);
-                                if (newValue >= milestoneTarget && oldVal < milestoneTarget && !announcedList.contains(milestone)) {
-                                    announcedList.add(milestone);
+                                boolean alreadyAnnounced = announcedList.stream().anyMatch(n -> n instanceof Number && ((Number) n).intValue() == milestone);
+                                if (newValue >= milestoneTarget && oldVal < milestoneTarget && !alreadyAnnounced) {
+                                    ((List<Object>) announcedList).add(milestone);
                                     if (milestone >= 100) {
                                         onlinePlayer.sendMessage(plugin.getMessageManager().getMessageComponentForPlayer("quota-milestone-reached",
                                                 "<green>[Quotas] Objectif %objective% atteint ! (+%elo% ELO)</green>",
