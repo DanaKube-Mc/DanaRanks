@@ -2,6 +2,9 @@ package app.danakube.danaranks.features.rush;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,6 +19,9 @@ public class RushEventState {
     private boolean rushActive = false;
     private boolean discordAnnounced = false;
     private final Map<UUID, Double> registeredScores = new ConcurrentHashMap<>();
+
+    private final List<PlannedRush> dailyRushes = new ArrayList<>();
+    private PlannedRush currentRush = null;
 
     public boolean isDailyPlanned() {
         return dailyPlanned;
@@ -85,6 +91,44 @@ public class RushEventState {
         return registeredScores;
     }
 
+    public List<PlannedRush> getDailyRushes() {
+        return Collections.unmodifiableList(dailyRushes);
+    }
+
+    public void setDailyRushes(List<PlannedRush> rushes) {
+        this.dailyRushes.clear();
+        if (rushes != null) {
+            this.dailyRushes.addAll(rushes);
+        }
+    }
+
+    public PlannedRush getCurrentRush() {
+        return currentRush;
+    }
+
+    public void setCurrentRush(PlannedRush rush) {
+        this.currentRush = rush;
+        if (rush != null) {
+            this.dailyResource = rush.getResource();
+            this.startTime = rush.getStartTime();
+            this.durationMinutes = rush.getDurationMinutes();
+            this.discordAnnounced = false;
+        }
+    }
+
+    public PlannedRush getNextUncompletedRush() {
+        for (PlannedRush rush : dailyRushes) {
+            if (!rush.isCompleted()) {
+                return rush;
+            }
+        }
+        return null;
+    }
+
+    public String getSessionName() {
+        return currentRush != null ? currentRush.getSessionName() : null;
+    }
+
     public void clear() {
         dailyPlanned = false;
         dailyResource = null;
@@ -94,5 +138,7 @@ public class RushEventState {
         rushActive = false;
         discordAnnounced = false;
         registeredScores.clear();
+        dailyRushes.clear();
+        currentRush = null;
     }
 }

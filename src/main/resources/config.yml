@@ -80,15 +80,35 @@ quotas-settings:
 
 # Configuration du Rush Quotidien
 rush:
-  # Heure de la planification journalière (tirage au sort de la ressource et des horaires)
+  # Heure de la planification journalière (tirage au sort des ressources et horaires des sessions)
   daily-setup-hour: 8
   
-  # Plage horaire dans laquelle le Rush peut démarrer (Heures de 0 à 23)
+  # Sessions de Rush quotidiennes configurables
+  # Chaque session tire au sort une ressource distincte, une heure de début et une durée
+  sessions:
+    matin:
+      name: "Matin"
+      start-window:
+        min-hour: 10
+        max-hour: 15
+      duration-range:
+        min-minutes: 20
+        max-minutes: 40
+    soir:
+      name: "Soir"
+      start-window:
+        min-hour: 17
+        max-hour: 22
+      duration-range:
+        min-minutes: 20
+        max-minutes: 40
+
+  # Plage horaire par défaut (fallback si rush.sessions n'est pas défini)
   start-window:
     min-hour: 12
     max-hour: 22
 
-  # Plage de durée de l'événement (en minutes)
+  # Plage de durée par défaut (fallback si rush.sessions n'est pas défini)
   duration-range:
     min-minutes: 20
     max-minutes: 60
